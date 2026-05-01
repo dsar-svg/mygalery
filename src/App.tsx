@@ -5,7 +5,7 @@ import { ArtworkDetail } from './components/ArtworkDetail';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
 import { useEffect, useState } from 'react';
-import { authService, ALLOWED_EMAILS } from './lib/auth';
+import { authService } from './lib/auth';
 import { artService } from './services/artService';
 import { User } from '@supabase/supabase-js';
 import { SiteSettings } from './types';
@@ -15,6 +15,7 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isAuthCallback, setIsAuthCallback] = useState(false);
 
   useEffect(() => {
@@ -28,14 +29,24 @@ export default function App() {
     // Check initial session first
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      // Check if user is admin
+      if (session?.user) {
+        authService.isAdmin(session.user).then(setIsAdmin);
+      }
       setIsAuthCallback(false);
     }).finally(() => {
       setLoading(false);
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);
+      if (session?.user) {
+        const admin = await authService.isAdmin(session.user);
+        setIsAdmin(admin);
+      } else {
+        setIsAdmin(false);
+      }
       setIsAuthCallback(false);
     });
 
@@ -63,9 +74,6 @@ export default function App() {
     );
   }
 
-  // Check if user is admin
-  const isAdmin = user && ALLOWED_EMAILS.includes(user.email || '');
-
   return (
     <BrowserRouter>
       <Routes>
@@ -76,7 +84,7 @@ export default function App() {
           <Route
             path="admin"
             element={
-              isAdmin
+              isAdmin === true
                 ? <AdminPanel user={user} />
                 : <Navigate to="/login" replace />
             }

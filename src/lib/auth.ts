@@ -1,11 +1,6 @@
 import { supabase } from './supabase';
 import { User } from '@supabase/supabase-js';
 
-export const ALLOWED_EMAILS = [
-  'dariomedina2619@gmail.com',
-  // Agrega más emails permitidos aquí
-];
-
 export const authService = {
   async loginWithGoogle() {
     try {
@@ -44,8 +39,16 @@ export const authService = {
     }
   },
 
-  isAdmin(user: User | null): boolean {
+  async isAdmin(user: User | null): Promise<boolean> {
     if (!user?.email) return false;
-    return ALLOWED_EMAILS.includes(user.email);
+
+    // Check if email is in allowed_emails table
+    const { data } = await supabase
+      .from('allowed_emails')
+      .select('email')
+      .eq('email', user.email)
+      .single();
+
+    return !!data;
   }
 };
