@@ -1,4 +1,4 @@
-import { Outlet, Link, useNavigate } from 'react-router-dom';
+import { Outlet, Link } from 'react-router-dom';
 import { User } from '@supabase/supabase-js';
 import { SiteSettings } from '../types';
 import { authService } from '../lib/auth';
@@ -10,11 +10,9 @@ interface LayoutProps {
 }
 
 export function Layout({ user, settings }: LayoutProps) {
-  const navigate = useNavigate();
-
   const handleLogout = async () => {
     await authService.logout();
-    navigate('/');
+    window.location.reload();
   };
 
   return (
@@ -54,15 +52,15 @@ export function Layout({ user, settings }: LayoutProps) {
             
             <div className="flex flex-col gap-4 items-start">
               {!user ? (
-                <button 
-                  onClick={() => authService.login()}
+                <Link
+                  to="/login"
                   className="inline-flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.3em] bg-black border border-white/10 text-bone-light px-8 py-4 rounded-full hover:bg-bone-light hover:text-charcoal transition-all shadow-2xl"
                 >
                   <LogIn className="w-4 h-4" />
                   Acceso Administración
-                </button>
+                </Link>
               ) : (
-                <button 
+                <button
                   onClick={handleLogout}
                   className="inline-flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.3em] bg-black border border-white/10 text-bone-light px-8 py-4 rounded-full hover:bg-bone-light hover:text-charcoal transition-all shadow-2xl"
                 >

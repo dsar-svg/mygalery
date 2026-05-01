@@ -7,12 +7,24 @@ export const ALLOWED_EMAILS = [
 ];
 
 export const authService = {
-  async login() {
+  async loginWithGoogle() {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        // No especificar redirectTo deja que Supabase use su callback por defecto
-        // que luego redirige al home automáticamente
+      });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
+  },
+
+  async loginWithEmail(email: string, password: string) {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
 
       if (error) throw error;

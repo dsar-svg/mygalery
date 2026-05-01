@@ -3,6 +3,7 @@ import { LandingPage } from './components/LandingPage';
 import { AdminPanel } from './components/AdminPanel';
 import { ArtworkDetail } from './components/ArtworkDetail';
 import { Layout } from './components/Layout';
+import { Login } from './pages/Login';
 import { useEffect, useState } from 'react';
 import { authService, ALLOWED_EMAILS } from './lib/auth';
 import { artService } from './services/artService';
@@ -71,12 +72,13 @@ export default function App() {
         <Route path="/" element={<Layout user={user} settings={settings} />}>
           <Route index element={<LandingPage settings={settings} />} />
           <Route path="artwork/:id" element={<ArtworkDetail settings={settings} />} />
+          <Route path="login" element={<Login />} />
           <Route
             path="admin"
             element={
               isAdmin
                 ? <AdminPanel user={user} />
-                : <Navigate to="/" replace />
+                : <Navigate to="/login" replace />
             }
           />
         </Route>

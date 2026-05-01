@@ -1,0 +1,169 @@
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
+import { ArrowLeft, Mail, Lock, Chrome } from 'lucide-react';
+
+export function Login() {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  const handleEmailLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      setSuccess(true);
+      setTimeout(() => navigate('/admin'), 1000);
+    } catch (err: any) {
+      setError(err.message || 'Error al iniciar sesión');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+      });
+
+      if (error) throw error;
+    } catch (err: any) {
+      setError(err.message || 'Error con Google login');
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#f5f2ed] flex flex-col">
+      {/* Header */}
+      <div className="absolute top-0 left-0 w-full p-6 md:p-12">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-3 uppercase tracking-[0.4em] text-[10px] font-bold opacity-40 hover:opacity-100 transition-all group"
+        >
+          <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-2 transition-transform" />
+          Volver a la Galería
+        </Link>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 flex items-center justify-center p-6">
+        <div className="w-full max-w-md">
+          {/* Logo / Icon */}
+          <div className="w-20 h-20 bg-[#1a1a1a] rounded-full flex items-center justify-center mx-auto mb-8 shadow-lg">
+            <Mail className="w-8 h-8 text-[#f5f2ed] opacity-80" />
+          </div>
+
+          {/* Title */}
+          <div className="text-center mb-10 space-y-4">
+            <h1 className="font-serif text-4xl italic text-[#1a1a1a]">
+              Acceso Privado
+            </h1>
+            <p className="text-sm text-[#1a1a1a] opacity-50 leading-relaxed">
+              Ingresa tus credenciales para acceder al panel de administración
+            </p>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleEmailLogin} className="space-y-6">
+            {/* Email */}
+            <div className="space-y-2">
+              <label className="text-[9px] font-black uppercase tracking-[0.3em] opacity-40 ml-1">
+                Correo Electrónico
+              </label>
+              <div className="relative">
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="tu@correo.com"
+                  className="w-full bg-white border border-[#1a1a1a]/10 rounded-2xl p-5 pl-14 focus:border-[#1a1a1a]/30 outline-none transition-all placeholder:opacity-30 font-mono text-sm"
+                />
+                <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 opacity-30" />
+              </div>
+            </div>
+
+            {/* Password */}
+            <div className="space-y-2">
+              <label className="text-[9px] font-black uppercase tracking-[0.3em] opacity-40 ml-1">
+                Contraseña
+              </label>
+              <div className="relative">
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-white border border-[#1a1a1a]/10 rounded-2xl p-5 pl-14 focus:border-[#1a1a1a]/30 outline-none transition-all placeholder:opacity-30 font-mono text-sm"
+                />
+                <Lock className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 opacity-30" />
+              </div>
+            </div>
+
+            {/* Error / Success */}
+            {error && (
+              <div className="bg-red-50 text-red-600 text-sm p-4 rounded-xl text-center">
+                {error}
+              </div>
+            )}
+
+            {success && (
+              <div className="bg-green-50 text-green-600 text-sm p-4 rounded-xl text-center">
+                ¡Inicio de sesión exitoso! Redirigiendo...
+              </div>
+            )}
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-[#1a1a1a] text-[#f5f2ed] py-5 rounded-full uppercase tracking-[0.3em] text-[10px] font-bold hover:bg-[#1a1a1a]/90 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Iniciando...' : 'Iniciar Sesión'}
+            </button>
+          </form>
+
+          {/* Divider */}
+          <div className="relative my-8">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-[#1a1a1a]/10"></div>
+            </div>
+            <div className="relative flex justify-center">
+              <span className="bg-[#f5f2ed] px-4 text-[9px] font-black uppercase tracking-[0.3em] opacity-30">
+                O continúa con
+              </span>
+            </div>
+          </div>
+
+          {/* Google Button */}
+          <button
+            onClick={handleGoogleLogin}
+            className="w-full bg-white border border-[#1a1a1a]/20 text-[#1a1a1a] py-5 rounded-full uppercase tracking-[0.2em] text-[10px] font-bold hover:bg-[#1a1a1a]/5 transition-all shadow-md flex items-center justify-center gap-3"
+          >
+            <Chrome className="w-4 h-4" />
+            Google
+          </button>
+
+          {/* Note */}
+          <p className="text-center text-[9px] opacity-30 mt-8 leading-relaxed">
+            Solo los usuarios autorizados pueden acceder al panel de administración
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
