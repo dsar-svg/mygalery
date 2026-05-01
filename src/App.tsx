@@ -14,11 +14,20 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAuthCallback, setIsAuthCallback] = useState(false);
 
   useEffect(() => {
+    // Check if we're on auth callback (URL has hash with token)
+    const isCallback = window.location.hash.includes('access_token') ||
+                       window.location.search.includes('code');
+    if (isCallback) {
+      setIsAuthCallback(true);
+    }
+
     // Check initial session first
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      setIsAuthCallback(false);
     }).finally(() => {
       setLoading(false);
     });
@@ -26,6 +35,7 @@ export default function App() {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      setIsAuthCallback(false);
     });
 
     // Subscribe to settings
@@ -39,12 +49,14 @@ export default function App() {
     };
   }, []);
 
-  if (loading) {
+  if (loading || isAuthCallback) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f5f2ed]">
         <div className="animate-pulse flex flex-col items-center">
           <div className="w-12 h-12 border-4 border-[#1a1a1a] border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p className="text-[#1a1a1a] font-serif italic text-lg text-center">Cargando Galería...</p>
+          <p className="text-[#1a1a1a] font-serif italic text-lg text-center">
+            {isAuthCallback ? 'Procesando inicio de sesión...' : 'Cargando Galería...'}
+          </p>
         </div>
       </div>
     );
