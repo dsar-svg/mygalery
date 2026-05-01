@@ -11,9 +11,8 @@ export const authService = {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/admin`,
-        },
+        // No especificar redirectTo deja que Supabase use su callback por defecto
+        // que luego redirige al home automáticamente
       });
 
       if (error) throw error;
