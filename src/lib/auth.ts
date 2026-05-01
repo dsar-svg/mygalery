@@ -12,7 +12,8 @@ export const authService = {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          // Usar la misma URL actual como callback
+          redirectTo: window.location.href,
         },
       });
 
@@ -22,6 +23,12 @@ export const authService = {
       console.error('Login error:', error);
       throw error;
     }
+  },
+
+  async handleCallback() {
+    // Supabase maneja la sesión automáticamente al cargar la página
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.user ?? null;
   },
 
   isAdmin(user: User | null): boolean {
@@ -40,13 +47,20 @@ export const authService = {
   },
 
   onAuthChange(callback: (user: User | null) => void) {
+    let initialSessionLoaded = false;
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      initialSessionLoaded = true;
       callback(session?.user ?? null);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // Skip initial session event since we already handled it
+      if (event === 'INITIAL_SESSION' && initialSessionLoaded) {
+        return;
+      }
       callback(session?.user ?? null);
     });
 
