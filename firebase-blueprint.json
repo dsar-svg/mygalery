@@ -1,0 +1,47 @@
+{
+  "entities": {
+    "Artwork": {
+      "title": "Artwork",
+      "description": "A piece of art in the gallery",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "imageUrl": { "type": "string" },
+        "technique": { "type": "string" },
+        "painter": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "ownerId": { "type": "string" }
+      },
+      "required": ["name", "price", "painter", "technique", "createdAt", "updatedAt", "ownerId"]
+    },
+    "SiteSettings": {
+      "title": "Site Settings",
+      "description": "Global settings for the gallery",
+      "type": "object",
+      "properties": {
+        "galleryName": { "type": "string" },
+        "heroLine1": { "type": "string" },
+        "heroLine2": { "type": "string" },
+        "heroImageUrl": { "type": "string" },
+        "footerDescription": { "type": "string" },
+        "currency": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["galleryName", "heroLine1", "heroLine2", "footerDescription", "currency", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/artworks/{artworkId}": {
+      "schema": "Artwork",
+      "description": "A collection of artworks"
+    },
+    "/settings/site": {
+      "schema": "SiteSettings",
+      "description": "Global settings document"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Art Gallery & Portfolio",
+  "description": "An elegant art showcase with a private admin panel for managing works, including QR code generation for visitors.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
