@@ -15,18 +15,18 @@ import { User } from '@supabase/supabase-js';
 import { SiteSettings } from './types';
 
 export default function App() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(undefined);
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubAuth = authService.onAuthChange((user) => {
       setUser(user);
+      setLoading(false);
     });
 
     const unsubSettings = artService.subscribeToSettings((data) => {
       setSettings(data);
-      setLoading(false);
     });
 
     return () => {
@@ -46,16 +46,18 @@ export default function App() {
     );
   }
 
+  const isAdmin = user && authService.isAdmin(user);
+
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Layout user={user} settings={settings} />}>
+        <Route path="/" element={<Layout user={user || null} settings={settings} />}>
           <Route index element={<LandingPage settings={settings} />} />
           <Route path="artwork/:id" element={<ArtworkDetail settings={settings} />} />
           <Route
             path="admin"
             element={
-              user && authService.isAdmin(user)
+              isAdmin
                 ? <AdminPanel user={user} />
                 : <Navigate to="/" replace />
             }

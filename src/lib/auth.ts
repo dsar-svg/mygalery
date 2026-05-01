@@ -12,8 +12,8 @@ export const authService = {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          // Usar la misma URL actual como callback
-          redirectTo: window.location.href,
+          // Redirigir al home después del login
+          redirectTo: `${window.location.origin}`,
         },
       });
 
