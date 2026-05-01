@@ -43,6 +43,7 @@ export function AdminPanel({ user }: AdminPanelProps) {
   const heroFileInputRef = useRef<HTMLInputElement>(null);
   const printRef = useRef<HTMLDivElement>(null);
   const [printingArt, setPrintingArt] = useState<Artwork | null>(null);
+  const [qrModalOpen, setQrModalOpen] = useState<string | null>(null);
 
   const [artworksLoaded, setArtworksLoaded] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
@@ -149,6 +150,38 @@ export function AdminPanel({ user }: AdminPanelProps) {
     setTimeout(() => {
       window.print();
     }, 500);
+  };
+
+  const handleDownloadQR = (art: Artwork) => {
+    const svgElement = document.getElementById(`qr-code-${art.id}`);
+    if (!svgElement) return;
+
+    const svgData = new XMLSerializer().serializeToString(svgElement);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx?.drawImage(img, 0, 0);
+      const pngFile = canvas.toDataURL('image/png');
+
+      const downloadLink = document.createElement('a');
+      downloadLink.download = `qr-${art.name.replace(/[^a-z0-9]/gi, '_')}.png`;
+      downloadLink.href = pngFile;
+      downloadLink.click();
+    };
+
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+  };
+
+  const openQrModal = (artId: string) => {
+    setQrModalOpen(artId);
+  };
+
+  const closeQrModal = () => {
+    setQrModalOpen(null);
   };
 
   const cancelEdit = () => {
@@ -486,20 +519,20 @@ export function AdminPanel({ user }: AdminPanelProps) {
               <p className="text-sm font-medium opacity-30 italic font-serif mt-2">{formatPrice(art.price, settings?.currency || 'EUR')}</p>
             </div>
             <div className="flex gap-4">
-              <button 
-                onClick={() => handlePrint(art)}
-                title="Imprimir QR"
+              <button
+                onClick={() => openQrModal(art.id)}
+                title="Ver QR"
                 className="w-12 h-12 rounded-full border border-charcoal/5 flex items-center justify-center bg-bone-light hover:bg-charcoal hover:text-bone-light transition-all duration-300"
               >
                 <QrCode className="w-4 h-4" />
               </button>
-              <button 
+              <button
                 onClick={() => handleEdit(art)}
                 className="w-12 h-12 rounded-full border border-charcoal/5 flex items-center justify-center bg-bone-light hover:bg-charcoal hover:text-bone-light transition-all duration-300"
               >
                 <Edit3 className="w-4 h-4" />
               </button>
-              <button 
+              <button
                 onClick={() => handleDelete(art.id)}
                 className="w-12 h-12 rounded-full border border-charcoal/5 flex items-center justify-center bg-bone-light hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all duration-300"
               >
@@ -509,6 +542,82 @@ export function AdminPanel({ user }: AdminPanelProps) {
           </motion.div>
         ))}
       </div>
+
+      {/* QR Modal */}
+      <AnimatePresence>
+        {qrModalOpen && artworks.find(a => a.id === qrModalOpen) && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={closeQrModal}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-[2rem] p-10 max-w-lg w-full shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {(() => {
+                const art = artworks.find(a => a.id === qrModalOpen);
+                if (!art) return null;
+                return (
+                  <div className="flex flex-col items-center space-y-8">
+                    <div className="space-y-4 text-center">
+                      <h2 className="font-serif text-3xl">{art.name}</h2>
+                      {art.technique && (
+                        <p className="text-[8px] font-black uppercase tracking-widest opacity-40">{art.technique}</p>
+                      )}
+                    </div>
+
+                    <div className="p-6 border-2 border-charcoal rounded-[2rem] bg-bone-light">
+                      <QRCodeSVG
+                        id={`qr-code-${art.id}`}
+                        value={`${window.location.origin}/artwork/${art.id}`}
+                        size={280}
+                        level="H"
+                        includeMargin={true}
+                      />
+                    </div>
+
+                    <div className="flex gap-4 w-full">
+                      <button
+                        onClick={() => handleDownloadQR(art)}
+                        className="flex-1 bg-charcoal text-bone-light py-4 rounded-full uppercase tracking-[0.2em] text-[10px] font-bold hover:scale-105 transition-all shadow-xl flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Descargar
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPrintingArt(art);
+                          closeQrModal();
+                          setTimeout(() => window.print(), 100);
+                        }}
+                        className="flex-1 bg-bone-dark text-charcoal py-4 rounded-full uppercase tracking-[0.2em] text-[10px] font-bold hover:scale-105 transition-all shadow-xl flex items-center justify-center gap-2"
+                      >
+                        <Printer className="w-4 h-4" />
+                        Imprimir
+                      </button>
+                    </div>
+
+                    <button
+                      onClick={closeQrModal}
+                      className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white border border-charcoal/5 flex items-center justify-center hover:bg-charcoal hover:text-white transition-all"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                );
+              })()}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Area de impresión oculta */}
       <div className="hidden print:block fixed inset-0 bg-white z-[9999] p-20 text-center space-y-12">
