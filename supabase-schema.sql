@@ -9,6 +9,7 @@ create table artworks (
   id uuid primary key default uuid_generate_v4(),
   name text not null,
   description text,
+  technique text,
   price numeric not null,
   image_url text not null,
   owner_id uuid not null references auth.users(id) on delete cascade,

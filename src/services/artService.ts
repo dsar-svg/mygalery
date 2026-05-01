@@ -18,6 +18,7 @@ export const artService = {
         id: item.id,
         name: item.name,
         description: item.description,
+        technique: item.technique,
         price: item.price,
         imageUrl: item.image_url,
         createdAt: new Date(item.created_at),
@@ -44,6 +45,7 @@ export const artService = {
         id: data.id,
         name: data.name,
         description: data.description,
+        technique: data.technique,
         price: data.price,
         imageUrl: data.image_url,
         createdAt: new Date(data.created_at),
@@ -112,6 +114,7 @@ export const artService = {
         .insert({
           name: data.name,
           description: data.description,
+          technique: data.technique,
           price: data.price,
           image_url: data.imageUrl,
           owner_id: user.id,
@@ -132,6 +135,7 @@ export const artService = {
       const updateData: Record<string, unknown> = {};
       if (data.name !== undefined) updateData.name = data.name;
       if (data.description !== undefined) updateData.description = data.description;
+      if (data.technique !== undefined) updateData.technique = data.technique;
       if (data.price !== undefined) updateData.price = data.price;
       if (data.imageUrl !== undefined) updateData.image_url = data.imageUrl;
 

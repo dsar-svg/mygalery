@@ -25,6 +25,7 @@ export function AdminPanel({ user }: AdminPanelProps) {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    technique: '',
     price: 0,
     imageUrl: '',
   });
@@ -106,7 +107,7 @@ export function AdminPanel({ user }: AdminPanelProps) {
         await artService.createArtwork(formData);
         setIsAdding(false);
       }
-      setFormData({ name: '', description: '', price: 0, imageUrl: '' });
+      setFormData({ name: '', description: '', technique: '', price: 0, imageUrl: '' });
     } catch (error) {
        console.error("Error saving artwork:", error);
     }
@@ -136,6 +137,7 @@ export function AdminPanel({ user }: AdminPanelProps) {
     setFormData({
       name: art.name,
       description: art.description || '',
+      technique: art.technique || '',
       price: art.price,
       imageUrl: art.imageUrl,
     });
@@ -365,6 +367,17 @@ export function AdminPanel({ user }: AdminPanelProps) {
                 </div>
 
                 <div className="space-y-3">
+                  <label className="text-[9px] font-black uppercase tracking-[0.3em] opacity-30 px-1">Técnica</label>
+                  <input
+                    type="text"
+                    placeholder="Óleo sobre lienzo, Acrílico, Acuarela..."
+                    className="w-full bg-bone-light border border-charcoal/5 rounded-2xl p-5 focus:bg-white focus:border-charcoal/20 outline-none transition-all placeholder:opacity-30 font-serif text-sm"
+                    value={formData.technique}
+                    onChange={(e) => setFormData({ ...formData, technique: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-3">
                   <label className="text-[9px] font-black uppercase tracking-[0.3em] opacity-30 px-1">Precio (EUR)</label>
                   <input
                     required
@@ -467,6 +480,9 @@ export function AdminPanel({ user }: AdminPanelProps) {
             </div>
             <div className="flex-grow min-w-0 text-center md:text-left">
               <h3 className="font-serif text-3xl mb-1 group-hover:tracking-tight transition-all">{art.name}</h3>
+              {art.technique && (
+                <p className="text-[8px] font-black uppercase tracking-widest opacity-40 mb-1">{art.technique}</p>
+              )}
               <p className="text-sm font-medium opacity-30 italic font-serif mt-2">{formatPrice(art.price, settings?.currency || 'EUR')}</p>
             </div>
             <div className="flex gap-4">
