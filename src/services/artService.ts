@@ -240,28 +240,15 @@ export const artService = {
       if (settings) callback(settings);
     };
 
-    const channel = supabase
-      .channel('settings-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'settings',
-          filter: `id=eq.00000000-0000-0000-0000-000000000001`,
-        },
-        () => {
-          fetchSettings();
-        }
-      )
-      .subscribe();
-
     // Initial fetch
     fetchSettings();
 
+    // Polling every 5 seconds as fallback (Realtime may not be enabled)
+    const intervalId = setInterval(fetchSettings, 5000);
+
     // Return unsubscribe function
     return () => {
-      supabase.removeChannel(channel);
+      clearInterval(intervalId);
     };
   }
 };
