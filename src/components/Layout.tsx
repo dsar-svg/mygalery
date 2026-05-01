@@ -73,11 +73,6 @@ export function Layout({ user, settings }: LayoutProps) {
             </div>
           </div>
           <div className="flex flex-col md:items-end justify-between">
-            <div className="flex gap-10">
-              {['Instagram', 'X', 'Behance', 'Vogue'].map(link => (
-                <a key={link} href="#" className="text-[10px] font-bold uppercase tracking-[0.3em] opacity-40 hover:opacity-100 transition-opacity">{link}</a>
-              ))}
-            </div>
             <div className="pt-24 md:pt-0">
               <p className="text-[9px] font-bold uppercase tracking-[0.5em] opacity-20">
                 © {new Date().getFullYear()} {settings?.galleryName || "Gallería D'Arte"} • Todos los derechos reservados

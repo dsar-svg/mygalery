@@ -3,11 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LandingPage } from './components/LandingPage';
 import { AdminPanel } from './components/AdminPanel';
 import { ArtworkDetail } from './components/ArtworkDetail';
 import { Layout } from './components/Layout';
+import { AuthCallback } from './pages/AuthCallback';
 import { useEffect, useState } from 'react';
 import { authService } from './lib/auth';
 import { artService } from './services/artService';
@@ -52,7 +53,15 @@ export default function App() {
         <Route path="/" element={<Layout user={user} settings={settings} />}>
           <Route index element={<LandingPage settings={settings} />} />
           <Route path="artwork/:id" element={<ArtworkDetail settings={settings} />} />
-          <Route path="admin" element={<AdminPanel user={user} />} />
+          <Route path="auth/callback" element={<AuthCallback />} />
+          <Route
+            path="admin"
+            element={
+              user && authService.isAdmin(user)
+                ? <AdminPanel user={user} />
+                : <Navigate to="/" replace />
+            }
+          />
         </Route>
       </Routes>
     </BrowserRouter>
