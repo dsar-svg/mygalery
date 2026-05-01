@@ -8,18 +8,17 @@ import { authService, ALLOWED_EMAILS } from './lib/auth';
 import { artService } from './services/artService';
 import { User } from '@supabase/supabase-js';
 import { SiteSettings } from './types';
+import { supabase } from './lib/supabase';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [loading, setLoading] = useState(true);
-  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     // Check initial session first
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      setAuthChecked(true);
     }).finally(() => {
       setLoading(false);
     });
@@ -27,7 +26,6 @@ export default function App() {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      setAuthChecked(true);
     });
 
     // Subscribe to settings
@@ -74,5 +72,3 @@ export default function App() {
     </BrowserRouter>
   );
 }
-
-import { supabase } from './lib/supabase';
