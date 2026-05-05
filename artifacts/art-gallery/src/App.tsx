@@ -26,15 +26,24 @@ export default function App() {
       setIsAuthCallback(true);
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        authService.isAdmin(session.user).then(setIsAdmin);
-      }
-      setIsAuthCallback(false);
-    }).finally(() => {
-      setLoading(false);
-    });
+    const sessionTimeout = new Promise<{ data: { session: null } }>((resolve) =>
+      setTimeout(() => resolve({ data: { session: null } }), 6000)
+    );
+
+    Promise.race([supabase.auth.getSession(), sessionTimeout])
+      .then(({ data: { session } }) => {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          authService.isAdmin(session.user).then(setIsAdmin);
+        }
+        setIsAuthCallback(false);
+      })
+      .catch(() => {
+        setIsAuthCallback(false);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);

@@ -22,6 +22,7 @@ export function AdminPanel({ user }: AdminPanelProps) {
   const [showAccess, setShowAccess] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const [allowedEmails, setAllowedEmails] = useState<string[]>([]);
   const [newEmail, setNewEmail] = useState('');
@@ -75,6 +76,7 @@ export function AdminPanel({ user }: AdminPanelProps) {
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, isHero: boolean = false) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setUploadError(null);
 
     try {
       setIsUploading(true);
@@ -84,9 +86,11 @@ export function AdminPanel({ user }: AdminPanelProps) {
       } else {
         setFormData(prev => ({ ...prev, imageUrl: url }));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Upload failed:', error);
-      alert('Error al subir la imagen. Por favor, inténtalo de nuevo.');
+      setUploadError(error?.message || 'Error al subir la imagen. Por favor, inténtalo de nuevo.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      if (heroFileInputRef.current) heroFileInputRef.current.value = '';
     } finally {
       setIsUploading(false);
     }
@@ -541,29 +545,36 @@ export function AdminPanel({ user }: AdminPanelProps) {
                       value={formData.imageUrl}
                       onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
                     />
-                    <div className="relative h-28">
-                      <input 
-                        type="file" 
-                        accept="image/*"
-                        className="hidden"
-                        ref={fileInputRef}
-                        onChange={(e) => handleFileUpload(e)}
-                      />
-                      <button 
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isUploading}
-                        className={`w-full h-full border-2 border-dashed border-charcoal/10 rounded-2xl flex flex-col items-center justify-center gap-2 hover:bg-bone-light transition-all ${isUploading ? 'opacity-50 cursor-wait' : ''}`}
-                      >
-                        {isUploading ? (
-                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-charcoal"></div>
-                        ) : (
-                          <Upload className="w-6 h-6 opacity-30" />
-                        )}
-                        <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">
-                          {isUploading ? 'Procesando Archivo...' : 'Subir desde el Dispositivo'}
-                        </span>
-                      </button>
+                    <div className="space-y-2">
+                      <div className="relative h-28">
+                        <input 
+                          type="file" 
+                          accept="image/*"
+                          className="hidden"
+                          ref={fileInputRef}
+                          onChange={(e) => handleFileUpload(e)}
+                        />
+                        <button 
+                          type="button"
+                          onClick={() => { setUploadError(null); fileInputRef.current?.click(); }}
+                          disabled={isUploading}
+                          className={`w-full h-full border-2 border-dashed rounded-2xl flex flex-col items-center justify-center gap-2 transition-all ${isUploading ? 'opacity-50 cursor-wait border-charcoal/10' : uploadError ? 'border-red-300 hover:bg-red-50' : 'border-charcoal/10 hover:bg-bone-light'}`}
+                        >
+                          {isUploading ? (
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-charcoal"></div>
+                          ) : (
+                            <Upload className={`w-6 h-6 ${uploadError ? 'text-red-400' : 'opacity-30'}`} />
+                          )}
+                          <span className={`text-[10px] font-bold uppercase tracking-widest ${uploadError ? 'text-red-500' : 'opacity-60'}`}>
+                            {isUploading ? 'Subiendo Imagen...' : uploadError ? 'Reintentar' : 'Subir desde el Dispositivo'}
+                          </span>
+                        </button>
+                      </div>
+                      {uploadError && (
+                        <div className="bg-red-50 border border-red-100 text-red-600 text-xs p-3 rounded-xl leading-relaxed">
+                          {uploadError}
+                        </div>
+                      )}
                     </div>
                   </div>
 
