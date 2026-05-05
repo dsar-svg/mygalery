@@ -3,11 +3,12 @@ import { User } from '@supabase/supabase-js';
 import { authService } from '../lib/auth';
 import { artService } from '../services/artService';
 import { Artwork } from '../types';
-import { Plus, Trash2, Edit3, Save, X, Image as ImageIcon, Upload, Printer, QrCode, Settings } from 'lucide-react';
+import { Plus, Trash2, Edit3, Save, X, Image as ImageIcon, Upload, Printer, QrCode, Settings, Users, Mail } from 'lucide-react';
 import { formatPrice } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { QRCodeSVG } from 'qrcode.react';
 import { SiteSettings } from '../types';
+import { supabase } from '../lib/supabase';
 
 interface AdminPanelProps {
   user: User | null;
@@ -18,8 +19,14 @@ export function AdminPanel({ user }: AdminPanelProps) {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showAccess, setShowAccess] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+
+  const [allowedEmails, setAllowedEmails] = useState<string[]>([]);
+  const [newEmail, setNewEmail] = useState('');
+  const [accessLoading, setAccessLoading] = useState(false);
+  const [accessError, setAccessError] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -163,6 +170,50 @@ export function AdminPanel({ user }: AdminPanelProps) {
     setFormData({ name: '', description: '', technique: '', price: 0, imageUrl: '' });
   };
 
+  const loadAllowedEmails = async () => {
+    setAccessLoading(true);
+    setAccessError(null);
+    try {
+      const { data, error } = await supabase.from('allowed_emails').select('email').order('email');
+      if (error) throw error;
+      setAllowedEmails(data.map((r: { email: string }) => r.email));
+    } catch (err: any) {
+      setAccessError('No se pudo cargar la lista de correos.');
+    } finally {
+      setAccessLoading(false);
+    }
+  };
+
+  const handleAddEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = newEmail.trim().toLowerCase();
+    if (!email) return;
+    if (allowedEmails.includes(email)) {
+      setAccessError('Este correo ya tiene acceso.');
+      return;
+    }
+    setAccessError(null);
+    try {
+      const { error } = await supabase.from('allowed_emails').insert({ email });
+      if (error) throw error;
+      setAllowedEmails(prev => [...prev, email].sort());
+      setNewEmail('');
+    } catch (err: any) {
+      setAccessError(err.message || 'Error al agregar el correo.');
+    }
+  };
+
+  const handleRemoveEmail = async (email: string) => {
+    if (!window.confirm(`¿Quitar acceso a ${email}?`)) return;
+    try {
+      const { error } = await supabase.from('allowed_emails').delete().eq('email', email);
+      if (error) throw error;
+      setAllowedEmails(prev => prev.filter(e => e !== email));
+    } catch (err: any) {
+      setAccessError(err.message || 'Error al eliminar el correo.');
+    }
+  };
+
   if (!user) {
     return (
       <div className="py-24 flex flex-col items-center justify-center space-y-12 max-w-lg mx-auto text-center px-6">
@@ -191,14 +242,21 @@ export function AdminPanel({ user }: AdminPanelProps) {
         </div>
         <div className="flex flex-wrap gap-4">
           <button 
-            onClick={() => { setShowSettings(!showSettings); setIsAdding(false); }}
+            onClick={() => { setShowAccess(!showAccess); setShowSettings(false); setIsAdding(false); if (!showAccess) loadAllowedEmails(); }}
+            className={`px-6 py-4 rounded-full flex items-center gap-3 uppercase tracking-[0.1em] text-[10px] font-bold hover:scale-105 transition-all shadow-md ${showAccess ? 'bg-charcoal text-white' : 'bg-bone-dark text-charcoal'}`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            Acceso Admin
+          </button>
+          <button 
+            onClick={() => { setShowSettings(!showSettings); setShowAccess(false); setIsAdding(false); }}
             className={`px-6 py-4 rounded-full flex items-center gap-3 uppercase tracking-[0.1em] text-[10px] font-bold hover:scale-105 transition-all shadow-md ${showSettings ? 'bg-charcoal text-white' : 'bg-bone-dark text-charcoal'}`}
           >
             <Settings className="w-3.5 h-3.5" />
             Preferencias de Galería
           </button>
           <button 
-            onClick={() => { setIsAdding(!isAdding); setShowSettings(false); }}
+            onClick={() => { setIsAdding(!isAdding); setShowSettings(false); setShowAccess(false); }}
             className="bg-charcoal text-bone-light px-8 py-4 rounded-full flex items-center gap-3 uppercase tracking-[0.2em] text-[10px] font-bold hover:scale-105 transition-all shadow-xl group"
           >
             <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" />
@@ -208,6 +266,88 @@ export function AdminPanel({ user }: AdminPanelProps) {
       </header>
 
       <AnimatePresence>
+        {showAccess && (
+          <motion.div
+            key="access-panel"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="bg-bone-dark/30 p-10 rounded-[2.5rem] border border-charcoal/5 overflow-hidden"
+          >
+            <div className="space-y-8">
+              <div className="space-y-2">
+                <p className="text-[9px] font-black uppercase tracking-[0.4em] opacity-30">Gestión de Permisos</p>
+                <h2 className="font-serif text-3xl">Correos <span className="italic opacity-50">Autorizados</span></h2>
+              </div>
+
+              <form onSubmit={handleAddEmail} className="flex gap-3">
+                <div className="relative flex-grow">
+                  <input
+                    type="email"
+                    required
+                    value={newEmail}
+                    onChange={(e) => { setNewEmail(e.target.value); setAccessError(null); }}
+                    placeholder="nuevo@correo.com"
+                    className="w-full bg-white border border-charcoal/10 rounded-2xl p-5 pl-14 focus:border-charcoal/30 outline-none transition-all placeholder:opacity-30 font-mono text-sm"
+                  />
+                  <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 opacity-30" />
+                </div>
+                <button
+                  type="submit"
+                  className="bg-charcoal text-bone-light px-8 py-4 rounded-2xl uppercase tracking-[0.15em] text-[10px] font-bold hover:scale-105 transition-all shadow-lg flex items-center gap-2 whitespace-nowrap"
+                >
+                  <Plus className="w-4 h-4" />
+                  Agregar
+                </button>
+              </form>
+
+              {accessError && (
+                <div className="bg-red-50 text-red-600 text-sm p-4 rounded-xl">
+                  {accessError}
+                </div>
+              )}
+
+              <div className="space-y-3">
+                {accessLoading ? (
+                  <div className="flex items-center justify-center py-12 opacity-30">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-charcoal"></div>
+                  </div>
+                ) : allowedEmails.length === 0 ? (
+                  <p className="text-center py-10 opacity-30 text-sm font-serif italic">
+                    No hay correos autorizados aún
+                  </p>
+                ) : (
+                  <AnimatePresence>
+                    {allowedEmails.map((email) => (
+                      <motion.div
+                        key={email}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 10 }}
+                        className="flex items-center justify-between bg-white rounded-2xl px-6 py-4 border border-charcoal/5 group hover:shadow-md transition-all"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-9 h-9 rounded-full bg-bone-dark flex items-center justify-center flex-shrink-0">
+                            <Mail className="w-4 h-4 opacity-40" />
+                          </div>
+                          <span className="font-mono text-sm opacity-70">{email}</span>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveEmail(email)}
+                          className="w-9 h-9 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 transition-all"
+                          title="Quitar acceso"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
         {showSettings && (
           <motion.div 
             initial={{ opacity: 0, height: 0 }}
