@@ -30,32 +30,28 @@ function Spinner({ message }: { message: string }) {
   );
 }
 
+// Three-state admin status:
+//   'checking' — DB query in flight, do NOT redirect yet
+//   'yes'      — confirmed admin
+//   'no'       — confirmed not admin (redirect to login)
+type AdminStatus = 'checking' | 'yes' | 'no';
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [settings, setSettings] = useState<SiteSettings | null>(null);
-  // true while the initial session + admin check is running
+  // True while the initial getSession() + admin check is running on first load
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
-  // true while an async admin-check triggered by onAuthStateChange is in flight
-  // — prevents the /admin route from redirecting to /login prematurely
-  const [adminChecking, setAdminChecking] = useState(false);
+  const [adminStatus, setAdminStatus] = useState<AdminStatus>('checking');
   const [isAuthCallback, setIsAuthCallback] = useState(false);
 
   useEffect(() => {
-    // Detect auth callback URL so we can show the right spinner message.
-    // Do NOT clean the URL here — AuthCallback needs the hash/code to exchange
-    // the token. It will call replaceState itself after a successful exchange.
     const hasAuthInUrl =
       window.location.hash.includes('access_token') ||
       window.location.search.includes('code');
-
-    if (hasAuthInUrl) {
-      setIsAuthCallback(true);
-    }
+    if (hasAuthInUrl) setIsAuthCallback(true);
 
     const run = async () => {
       try {
-        // 3-second hard cap on getSession() — avoids hangs on broken sessions
         const { data: { session } } = await withTimeout(
           supabase.auth.getSession(),
           3000,
@@ -64,21 +60,16 @@ export default function App() {
 
         if (session?.user) {
           setUser(session.user);
-          // 4-second hard cap on the DB admin check
-          const admin = await withTimeout(
-            authService.isAdmin(session.user),
-            4000,
-            false,
-          );
-          setIsAdmin(admin);
+          const admin = await withTimeout(authService.isAdmin(session.user), 4000, false);
+          setAdminStatus(admin ? 'yes' : 'no');
         } else {
           setUser(null);
-          setIsAdmin(false);
+          setAdminStatus('no');
         }
       } catch {
         try { await supabase.auth.signOut(); } catch { /* ignore */ }
         setUser(null);
-        setIsAdmin(false);
+        setAdminStatus('no');
       } finally {
         setIsAuthCallback(false);
         setLoading(false);
@@ -87,28 +78,20 @@ export default function App() {
 
     run();
 
-    // Only react to explicit auth events — not INITIAL_SESSION which would
-    // double-fire with the getSession() call above and cause a race condition.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
         setUser(session?.user ?? null);
         if (session?.user) {
-          // Signal that we're mid-check so /admin route doesn't redirect yet
-          setAdminChecking(true);
-          try {
-            const admin = await withTimeout(authService.isAdmin(session.user), 4000, false);
-            setIsAdmin(admin);
-          } finally {
-            setAdminChecking(false);
-          }
+          // Mark as checking immediately so /admin route shows spinner, not redirect
+          setAdminStatus('checking');
+          const admin = await withTimeout(authService.isAdmin(session.user), 4000, false);
+          setAdminStatus(admin ? 'yes' : 'no');
         } else {
-          setIsAdmin(false);
-          setAdminChecking(false);
+          setAdminStatus('no');
         }
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
-        setIsAdmin(false);
-        setAdminChecking(false);
+        setAdminStatus('no');
       }
     });
 
@@ -141,12 +124,12 @@ export default function App() {
           <Route
             path="admin"
             element={
-              // While the admin check triggered by SIGNED_IN is still in flight,
-              // show a spinner instead of redirecting — this closes the race
-              // condition between AuthCallback navigating here and isAdmin being set.
-              adminChecking
+              // 'checking' → spinner (never redirect prematurely)
+              // 'yes'      → admin panel
+              // 'no'       → send to login
+              adminStatus === 'checking'
                 ? <Spinner message="Verificando acceso..." />
-                : isAdmin
+                : adminStatus === 'yes'
                   ? <AdminPanel user={user} />
                   : <Navigate to="/login" replace />
             }
