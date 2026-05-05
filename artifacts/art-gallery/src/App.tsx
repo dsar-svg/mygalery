@@ -12,6 +12,13 @@ import { User } from '@supabase/supabase-js';
 import { SiteSettings } from './types';
 import { supabase } from './lib/supabase';
 
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
+}
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [settings, setSettings] = useState<SiteSettings | null>(null);
@@ -20,49 +27,65 @@ export default function App() {
   const [isAuthCallback, setIsAuthCallback] = useState(false);
 
   useEffect(() => {
-    const isCallback = window.location.hash.includes('access_token') ||
-                       window.location.search.includes('code');
-    if (isCallback) {
+    // Detect auth callback URL and immediately clean the hash from the browser
+    // history so that page reloads don't trigger stale-token warnings.
+    const hasAuthInUrl =
+      window.location.hash.includes('access_token') ||
+      window.location.search.includes('code');
+
+    if (hasAuthInUrl) {
       setIsAuthCallback(true);
+      // Remove the token from the URL right away — the Supabase client already
+      // received it during initialisation; leaving it in the URL causes the
+      // "URL could be stale" warning on every subsequent reload.
+      window.history.replaceState(null, '', window.location.pathname);
     }
 
-    // Reduced to 3 seconds — stale sessions can cause getSession() to hang
-    // indefinitely at the browser level even if JS times out
-    const sessionTimeout = new Promise<{ data: { session: null } }>((resolve) =>
-      setTimeout(() => resolve({ data: { session: null } }), 3000)
-    );
+    const run = async () => {
+      try {
+        // 3-second hard cap on getSession() — avoids hangs on broken sessions
+        const { data: { session } } = await withTimeout(
+          supabase.auth.getSession(),
+          3000,
+          { data: { session: null } } as any,
+        );
 
-    Promise.race([supabase.auth.getSession(), sessionTimeout])
-      .then(async ({ data: { session } }) => {
         if (session?.user) {
           setUser(session.user);
-          const admin = await authService.isAdmin(session.user);
+          // 4-second hard cap on the DB admin check — if it hangs we default
+          // to false so the user sees login instead of an infinite spinner.
+          const admin = await withTimeout(
+            authService.isAdmin(session.user),
+            4000,
+            false,
+          );
           setIsAdmin(admin);
         } else {
           setUser(null);
           setIsAdmin(false);
         }
-        setIsAuthCallback(false);
-      })
-      .catch(async () => {
-        // Session check failed — sign out to clear any broken/stale session
-        // so the next refresh starts clean instead of hanging again
-        try { await supabase.auth.signOut(); } catch {}
+      } catch {
+        // Broken / missing session — sign out silently and start fresh
+        try { await supabase.auth.signOut(); } catch { /* ignore */ }
         setUser(null);
         setIsAdmin(false);
+      } finally {
+        // Always unblock the UI — this now runs after BOTH session AND admin
+        // checks complete (or time out), so loading: false is guaranteed.
         setIsAuthCallback(false);
-      })
-      .finally(() => {
         setLoading(false);
-      });
+      }
+    };
+
+    run();
 
     // Only react to explicit auth events — not INITIAL_SESSION which would
-    // double-fire with the getSession() call above and cause a race condition
+    // double-fire with the getSession() call above and cause a race condition.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
         setUser(session?.user ?? null);
         if (session?.user) {
-          const admin = await authService.isAdmin(session.user);
+          const admin = await withTimeout(authService.isAdmin(session.user), 4000, false);
           setIsAdmin(admin);
         } else {
           setIsAdmin(false);
@@ -71,7 +94,6 @@ export default function App() {
         setUser(null);
         setIsAdmin(false);
       }
-      setIsAuthCallback(false);
     });
 
     const unsubSettings = artService.subscribeToSettings((data) => {
