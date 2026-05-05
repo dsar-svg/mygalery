@@ -19,7 +19,11 @@ export const supabase = isMisconfigured
     })
   : createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
-        detectSessionInUrl: true,
+        // false = Supabase never scans window.location for tokens at getSession()
+        // time. This prevents the "URL could be stale" warning when reloading any
+        // page that once had #access_token in the hash. The AuthCallback page
+        // handles the token manually using setSession / exchangeCodeForSession.
+        detectSessionInUrl: false,
         persistSession: true,
         autoRefreshToken: true,
       },
