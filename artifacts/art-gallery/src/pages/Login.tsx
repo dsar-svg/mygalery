@@ -7,20 +7,37 @@ export function Login() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sent, setSent] = useState(false);
 
-  const handleEmailLogin = async (e: React.FormEvent) => {
+  const handleEnter = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithOtp({ email });
-      if (error) throw error;
-      setSent(true);
+      const { data } = await supabase
+        .from('allowed_emails')
+        .select('email')
+        .eq('email', email.trim().toLowerCase())
+        .single();
+
+      if (!data) {
+        setError('Este correo no tiene acceso autorizado.');
+        setLoading(false);
+        return;
+      }
+
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          queryParams: { login_hint: email.trim() },
+        },
+      });
+
+      if (oauthError) throw oauthError;
     } catch (err: any) {
-      setError(err.message || 'Error al enviar el enlace');
-    } finally {
+      if (err.message !== 'No rows found') {
+        setError(err.message || 'Error al verificar acceso');
+      }
       setLoading(false);
     }
   };
@@ -59,48 +76,42 @@ export function Login() {
               Acceso Privado
             </h1>
             <p className="text-sm text-charcoal opacity-50 leading-relaxed">
-              Ingresa tu correo y te enviaremos un enlace de acceso
+              Ingresa tu correo para acceder al panel de administración
             </p>
           </div>
 
-          {sent ? (
-            <div className="bg-green-50 text-green-700 text-sm p-5 rounded-2xl text-center leading-relaxed">
-              ¡Enlace enviado! Revisa tu correo y haz clic en el enlace para acceder.
-            </div>
-          ) : (
-            <form onSubmit={handleEmailLogin} className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-[9px] font-black uppercase tracking-[0.3em] opacity-40 ml-1">
-                  Correo Electrónico
-                </label>
-                <div className="relative">
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="tu@correo.com"
-                    className="w-full bg-white border border-charcoal/10 rounded-2xl p-5 pl-14 focus:border-charcoal/30 outline-none transition-all placeholder:opacity-30 font-mono text-sm"
-                  />
-                  <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 opacity-30" />
-                </div>
+          <form onSubmit={handleEnter} className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-[9px] font-black uppercase tracking-[0.3em] opacity-40 ml-1">
+                Correo Electrónico
+              </label>
+              <div className="relative">
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="tu@correo.com"
+                  className="w-full bg-white border border-charcoal/10 rounded-2xl p-5 pl-14 focus:border-charcoal/30 outline-none transition-all placeholder:opacity-30 font-mono text-sm"
+                />
+                <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 opacity-30" />
               </div>
+            </div>
 
-              {error && (
-                <div className="bg-red-50 text-red-600 text-sm p-4 rounded-xl text-center">
-                  {error}
-                </div>
-              )}
+            {error && (
+              <div className="bg-red-50 text-red-600 text-sm p-4 rounded-xl text-center">
+                {error}
+              </div>
+            )}
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-charcoal text-bone-light py-5 rounded-full uppercase tracking-[0.3em] text-[10px] font-bold hover:bg-charcoal/90 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Enviando...' : 'Enviar Enlace de Acceso'}
-              </button>
-            </form>
-          )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-charcoal text-bone-light py-5 rounded-full uppercase tracking-[0.3em] text-[10px] font-bold hover:bg-charcoal/90 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Verificando...' : 'Entrar'}
+            </button>
+          </form>
 
           <div className="relative my-8">
             <div className="absolute inset-0 flex items-center">
