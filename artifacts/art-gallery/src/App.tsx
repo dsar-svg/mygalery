@@ -27,18 +27,15 @@ export default function App() {
   const [isAuthCallback, setIsAuthCallback] = useState(false);
 
   useEffect(() => {
-    // Detect auth callback URL and immediately clean the hash from the browser
-    // history so that page reloads don't trigger stale-token warnings.
+    // Detect auth callback URL so we can show the right spinner message.
+    // Do NOT clean the URL here — AuthCallback needs the hash/code to exchange
+    // the token. It will call replaceState itself once the exchange succeeds.
     const hasAuthInUrl =
       window.location.hash.includes('access_token') ||
       window.location.search.includes('code');
 
     if (hasAuthInUrl) {
       setIsAuthCallback(true);
-      // Remove the token from the URL right away — the Supabase client already
-      // received it during initialisation; leaving it in the URL causes the
-      // "URL could be stale" warning on every subsequent reload.
-      window.history.replaceState(null, '', window.location.pathname);
     }
 
     const run = async () => {
