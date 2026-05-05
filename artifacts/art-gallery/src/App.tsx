@@ -19,17 +19,32 @@ function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T
   ]);
 }
 
+function Spinner({ message }: { message: string }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-bone-light">
+      <div className="animate-pulse flex flex-col items-center">
+        <div className="w-12 h-12 border-4 border-charcoal border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-charcoal font-serif italic text-lg text-center">{message}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [settings, setSettings] = useState<SiteSettings | null>(null);
+  // true while the initial session + admin check is running
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  // true while an async admin-check triggered by onAuthStateChange is in flight
+  // — prevents the /admin route from redirecting to /login prematurely
+  const [adminChecking, setAdminChecking] = useState(false);
   const [isAuthCallback, setIsAuthCallback] = useState(false);
 
   useEffect(() => {
     // Detect auth callback URL so we can show the right spinner message.
     // Do NOT clean the URL here — AuthCallback needs the hash/code to exchange
-    // the token. It will call replaceState itself once the exchange succeeds.
+    // the token. It will call replaceState itself after a successful exchange.
     const hasAuthInUrl =
       window.location.hash.includes('access_token') ||
       window.location.search.includes('code');
@@ -49,8 +64,7 @@ export default function App() {
 
         if (session?.user) {
           setUser(session.user);
-          // 4-second hard cap on the DB admin check — if it hangs we default
-          // to false so the user sees login instead of an infinite spinner.
+          // 4-second hard cap on the DB admin check
           const admin = await withTimeout(
             authService.isAdmin(session.user),
             4000,
@@ -62,13 +76,10 @@ export default function App() {
           setIsAdmin(false);
         }
       } catch {
-        // Broken / missing session — sign out silently and start fresh
         try { await supabase.auth.signOut(); } catch { /* ignore */ }
         setUser(null);
         setIsAdmin(false);
       } finally {
-        // Always unblock the UI — this now runs after BOTH session AND admin
-        // checks complete (or time out), so loading: false is guaranteed.
         setIsAuthCallback(false);
         setLoading(false);
       }
@@ -82,14 +93,22 @@ export default function App() {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
         setUser(session?.user ?? null);
         if (session?.user) {
-          const admin = await withTimeout(authService.isAdmin(session.user), 4000, false);
-          setIsAdmin(admin);
+          // Signal that we're mid-check so /admin route doesn't redirect yet
+          setAdminChecking(true);
+          try {
+            const admin = await withTimeout(authService.isAdmin(session.user), 4000, false);
+            setIsAdmin(admin);
+          } finally {
+            setAdminChecking(false);
+          }
         } else {
           setIsAdmin(false);
+          setAdminChecking(false);
         }
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setIsAdmin(false);
+        setAdminChecking(false);
       }
     });
 
@@ -105,14 +124,7 @@ export default function App() {
 
   if (loading || isAuthCallback) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-bone-light">
-        <div className="animate-pulse flex flex-col items-center">
-          <div className="w-12 h-12 border-4 border-charcoal border-t-transparent rounded-full animate-spin mb-4"></div>
-          <p className="text-charcoal font-serif italic text-lg text-center">
-            {isAuthCallback ? 'Procesando inicio de sesión...' : 'Cargando Galería...'}
-          </p>
-        </div>
-      </div>
+      <Spinner message={isAuthCallback ? 'Procesando inicio de sesión...' : 'Cargando Galería...'} />
     );
   }
 
@@ -129,9 +141,14 @@ export default function App() {
           <Route
             path="admin"
             element={
-              isAdmin === true
-                ? <AdminPanel user={user} />
-                : <Navigate to="/login" replace />
+              // While the admin check triggered by SIGNED_IN is still in flight,
+              // show a spinner instead of redirecting — this closes the race
+              // condition between AuthCallback navigating here and isAdmin being set.
+              adminChecking
+                ? <Spinner message="Verificando acceso..." />
+                : isAdmin
+                  ? <AdminPanel user={user} />
+                  : <Navigate to="/login" replace />
             }
           />
         </Route>
