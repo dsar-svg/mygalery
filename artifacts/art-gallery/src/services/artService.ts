@@ -106,29 +106,35 @@ export const artService = {
   },
 
   async createArtwork(data: Omit<Artwork, 'id' | 'createdAt' | 'updatedAt' | 'ownerId'>): Promise<string> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Must be logged in to create artwork');
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) throw new Error('Error de autenticación. Por favor cierra sesión y vuelve a entrar.');
+    if (!user) throw new Error('Debes iniciar sesión para publicar obras.');
 
-    try {
-      const { data: result, error } = await supabase
-        .from('artworks')
-        .insert({
-          name: data.name,
-          description: data.description,
-          technique: data.technique,
-          price: data.price,
-          image_url: data.imageUrl,
-          owner_id: user.id,
-        })
-        .select()
-        .single();
+    const { data: result, error } = await supabase
+      .from('artworks')
+      .insert({
+        name: data.name,
+        description: data.description,
+        technique: data.technique,
+        price: data.price,
+        image_url: data.imageUrl,
+        owner_id: user.id,
+      })
+      .select()
+      .single();
 
-      if (error) throw error;
-      return result.id;
-    } catch (error) {
-      console.error('Error creating artwork:', error);
-      return '';
+    if (error) {
+      const msg = (error as any).message || '';
+      if (msg.includes('policy') || msg.includes('violates') || error.code === '42501') {
+        throw new Error('Sin permiso para crear obras. Verifica las políticas RLS de la tabla "artworks" en Supabase.');
+      }
+      if (msg.includes('relation') || msg.includes('does not exist')) {
+        throw new Error('La tabla "artworks" no existe en Supabase. Verifica que esté creada.');
+      }
+      throw new Error(msg || 'Error al guardar la obra.');
     }
+
+    return result.id;
   },
 
   async updateArtwork(id: string, data: Partial<Omit<Artwork, 'id' | 'createdAt' | 'updatedAt' | 'ownerId'>>): Promise<void> {

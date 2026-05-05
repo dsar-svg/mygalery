@@ -23,6 +23,8 @@ export function AdminPanel({ user }: AdminPanelProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const [allowedEmails, setAllowedEmails] = useState<string[]>([]);
   const [newEmail, setNewEmail] = useState('');
@@ -98,6 +100,8 @@ export function AdminPanel({ user }: AdminPanelProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaveError(null);
+    setIsSaving(true);
     try {
       if (editingId) {
         await artService.updateArtwork(editingId, formData);
@@ -107,8 +111,11 @@ export function AdminPanel({ user }: AdminPanelProps) {
         setIsAdding(false);
       }
       setFormData({ name: '', description: '', technique: '', price: 0, imageUrl: '' });
-    } catch (error) {
-       console.error("Error saving artwork:", error);
+    } catch (error: any) {
+      console.error("Error saving artwork:", error);
+      setSaveError(error?.message || 'Error al guardar la obra. Por favor intenta de nuevo.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -598,10 +605,19 @@ export function AdminPanel({ user }: AdminPanelProps) {
                   )}
                 </div>
 
+                {saveError && (
+                  <div className="bg-red-50 border border-red-100 text-red-600 text-xs p-3 rounded-xl leading-relaxed">
+                    {saveError}
+                  </div>
+                )}
                 <div className="flex gap-4 pt-6">
-                  <button type="submit" disabled={isUploading} className="flex-grow bg-charcoal text-bone-light py-5 rounded-2xl uppercase tracking-[0.2em] text-[11px] font-bold hover:opacity-90 transition-all flex items-center justify-center gap-3 shadow-xl disabled:opacity-50">
-                    <Save className="w-5 h-5" />
-                    {editingId ? 'Confirmar Cambios' : 'Certificar Publicación'}
+                  <button type="submit" disabled={isUploading || isSaving} className="flex-grow bg-charcoal text-bone-light py-5 rounded-2xl uppercase tracking-[0.2em] text-[11px] font-bold hover:opacity-90 transition-all flex items-center justify-center gap-3 shadow-xl disabled:opacity-50">
+                    {isSaving ? (
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-bone-light" />
+                    ) : (
+                      <Save className="w-5 h-5" />
+                    )}
+                    {isSaving ? 'Guardando...' : editingId ? 'Confirmar Cambios' : 'Certificar Publicación'}
                   </button>
                   <button type="button" onClick={cancelEdit} className="px-8 bg-bone-dark rounded-2xl hover:bg-red-50 hover:text-red-500 transition-colors group">
                     <X className="w-5 h-5 opacity-40 group-hover:opacity-100 transition-opacity" />
