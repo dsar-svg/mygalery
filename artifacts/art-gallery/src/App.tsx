@@ -26,31 +26,49 @@ export default function App() {
       setIsAuthCallback(true);
     }
 
+    // Reduced to 3 seconds — stale sessions can cause getSession() to hang
+    // indefinitely at the browser level even if JS times out
     const sessionTimeout = new Promise<{ data: { session: null } }>((resolve) =>
-      setTimeout(() => resolve({ data: { session: null } }), 6000)
+      setTimeout(() => resolve({ data: { session: null } }), 3000)
     );
 
     Promise.race([supabase.auth.getSession(), sessionTimeout])
-      .then(({ data: { session } }) => {
-        setUser(session?.user ?? null);
+      .then(async ({ data: { session } }) => {
         if (session?.user) {
-          authService.isAdmin(session.user).then(setIsAdmin);
+          setUser(session.user);
+          const admin = await authService.isAdmin(session.user);
+          setIsAdmin(admin);
+        } else {
+          setUser(null);
+          setIsAdmin(false);
         }
         setIsAuthCallback(false);
       })
-      .catch(() => {
+      .catch(async () => {
+        // Session check failed — sign out to clear any broken/stale session
+        // so the next refresh starts clean instead of hanging again
+        try { await supabase.auth.signOut(); } catch {}
+        setUser(null);
+        setIsAdmin(false);
         setIsAuthCallback(false);
       })
       .finally(() => {
         setLoading(false);
       });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        const admin = await authService.isAdmin(session.user);
-        setIsAdmin(admin);
-      } else {
+    // Only react to explicit auth events — not INITIAL_SESSION which would
+    // double-fire with the getSession() call above and cause a race condition
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          const admin = await authService.isAdmin(session.user);
+          setIsAdmin(admin);
+        } else {
+          setIsAdmin(false);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
         setIsAdmin(false);
       }
       setIsAuthCallback(false);
