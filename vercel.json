@@ -1,9 +1,0 @@
-{
-  "buildCommand": "cd artifacts/art-gallery && npx vite build --config vite.config.ts",
-  "outputDirectory": "artifacts/art-gallery/dist",
-  "installCommand": "pnpm install",
-  "framework": null,
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
-}

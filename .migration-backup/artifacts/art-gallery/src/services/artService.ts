@@ -59,21 +59,40 @@ export const artService = {
 
   async uploadImage(file: File): Promise<string> {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Must be logged in to upload images');
+    if (!user) throw new Error('Debes iniciar sesión para subir imágenes.');
 
     const safeName = file.name.replace(/[^a-z0-9.]/gi, '_').toLowerCase();
     const timestamp = Date.now();
     const path = `artworks/${user.id}/${timestamp}_${safeName}`;
 
-    try {
-      const { data, error } = await supabase.storage
-        .from(BUCKET_NAME)
-        .upload(path, file, {
-          cacheControl: '3600',
-          upsert: false,
-        });
+    const uploadPromise = supabase.storage
+      .from(BUCKET_NAME)
+      .upload(path, file, { cacheControl: '3600', upsert: false });
 
-      if (error) throw error;
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(
+        'La subida tardó demasiado y fue cancelada. ' +
+        'Asegúrate de que el bucket "artworks" exista en Supabase Storage ' +
+        'y que las políticas RLS permitan subidas.'
+      )), 20000)
+    );
+
+    try {
+      const { data, error } = await Promise.race([uploadPromise, timeoutPromise]);
+
+      if (error) {
+        const msg = (error as any).message || '';
+        if (msg.includes('Bucket not found') || msg.includes('not found')) {
+          throw new Error('El bucket "artworks" no existe en Supabase Storage. Créalo desde el panel de Supabase → Storage.');
+        }
+        if (msg.includes('JWT') || msg.includes('auth')) {
+          throw new Error('Error de autenticación. Por favor cierra sesión y vuelve a iniciarla.');
+        }
+        if (msg.includes('policy') || msg.includes('violates')) {
+          throw new Error('Sin permiso para subir imágenes. Verifica las políticas RLS del bucket en Supabase.');
+        }
+        throw new Error(msg || 'Error al subir la imagen.');
+      }
 
       const { data: { publicUrl } } = supabase.storage
         .from(BUCKET_NAME)
@@ -82,42 +101,40 @@ export const artService = {
       return publicUrl;
     } catch (error) {
       console.error('Storage upload error:', error);
-      if (error && typeof error === 'object' && 'message' in error) {
-        if (String((error as any).message).includes('JWT')) {
-          throw new Error('Error de autenticación. Por favor inicia sesión nuevamente.');
-        }
-        if (String((error as any).message).includes('policy')) {
-          throw new Error('Error de permisos en Storage. Por favor verifica las políticas RLS.');
-        }
-      }
       throw error;
     }
   },
 
   async createArtwork(data: Omit<Artwork, 'id' | 'createdAt' | 'updatedAt' | 'ownerId'>): Promise<string> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Must be logged in to create artwork');
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) throw new Error('Error de autenticación. Por favor cierra sesión y vuelve a entrar.');
+    if (!user) throw new Error('Debes iniciar sesión para publicar obras.');
 
-    try {
-      const { data: result, error } = await supabase
-        .from('artworks')
-        .insert({
-          name: data.name,
-          description: data.description,
-          technique: data.technique,
-          price: data.price,
-          image_url: data.imageUrl,
-          owner_id: user.id,
-        })
-        .select()
-        .single();
+    const { data: result, error } = await supabase
+      .from('artworks')
+      .insert({
+        name: data.name,
+        description: data.description,
+        technique: data.technique,
+        price: data.price,
+        image_url: data.imageUrl,
+        owner_id: user.id,
+      })
+      .select()
+      .single();
 
-      if (error) throw error;
-      return result.id;
-    } catch (error) {
-      console.error('Error creating artwork:', error);
-      return '';
+    if (error) {
+      const msg = (error as any).message || '';
+      if (msg.includes('policy') || msg.includes('violates') || error.code === '42501') {
+        throw new Error('Sin permiso para crear obras. Verifica las políticas RLS de la tabla "artworks" en Supabase.');
+      }
+      if (msg.includes('relation') || msg.includes('does not exist')) {
+        throw new Error('La tabla "artworks" no existe en Supabase. Verifica que esté creada.');
+      }
+      throw new Error(msg || 'Error al guardar la obra.');
     }
+
+    return result.id;
   },
 
   async updateArtwork(id: string, data: Partial<Omit<Artwork, 'id' | 'createdAt' | 'updatedAt' | 'ownerId'>>): Promise<void> {

@@ -1,45 +1,51 @@
-# Art Gallery & Portfolio
+# Workspace
 
-An elegant art gallery and portfolio web app with a private admin panel for curating and managing artworks. Built with Vite + React, Tailwind CSS v4, and Supabase for authentication, data storage, and image uploads.
+## Overview
 
-## Architecture
+pnpm workspace monorepo using TypeScript. Art Gallery & Portfolio web app, ported from Vercel/v0.
 
-- **Frontend**: `artifacts/art-gallery/` — Vite + React SPA served at `/`
-- **Backend**: Supabase (external) — handles auth (Google OAuth + email/password), PostgreSQL database, and object storage for artwork images
-- **API Server**: `artifacts/api-server/` — scaffold Express server (not actively used by this app)
+## Stack
 
-## Key Features
+- **Monorepo tool**: pnpm workspaces
+- **Node.js version**: 24
+- **Package manager**: pnpm
+- **TypeScript version**: 5.9
+- **API framework**: Express 5
+- **Database**: PostgreSQL + Drizzle ORM
+- **Validation**: Zod (`zod/v4`), `drizzle-zod`
+- **API codegen**: Orval (from OpenAPI spec)
+- **Build**: esbuild (CJS bundle)
 
-- **Landing page** — full-screen hero with artwork grid, motion animations
-- **Artwork detail** — image zoom, share link copy, technique + price display
-- **Admin panel** — create/edit/delete artworks, QR code generation + download/print, gallery settings (name, hero image, currency, footer)
-- **Authentication** — Supabase auth with Google OAuth and email/password login
-- **Admin gating** — only users in `allowed_emails` Supabase table can access `/admin`
+## Artifacts
 
-## Environment Variables
+- **`artifacts/art-gallery`** — Main React + Vite web app (serves at `/`)
+  - Supabase for auth (Google OAuth) and data (artworks, settings, allowed_emails tables)
+  - Tailwind CSS v4 with custom theme (bone, charcoal palette + Cormorant Garamond / Inter fonts)
+  - React Router DOM v7 for routing
+  - motion (Framer Motion) for animations
+  - qrcode.react for QR code generation
+  - Spanish-language UI
+- **`artifacts/api-server`** — Express API server (serves at `/api`)
 
-Required secrets (set in Replit Secrets):
+## Environment Variables Required
+
 - `VITE_SUPABASE_URL` — Supabase project URL
-- `VITE_SUPABASE_ANON_KEY` — Supabase anon/public key
+- `VITE_SUPABASE_ANON_KEY` — Supabase anonymous API key
 
-## Supabase Schema
+## App Routes
 
-The app expects these Supabase tables:
-- `artworks` — id, name, description, technique, price, image_url, owner_id, created_at, updated_at
-- `settings` — id (fixed UUID `00000000-0000-0000-0000-000000000001`), gallery_name, hero_line1, hero_line2, hero_image_url, footer_description, currency, updated_at
-- `allowed_emails` — email (used for admin access gating)
-- Supabase Storage bucket: `artworks` (for image uploads)
+- `/` — Gallery landing page with hero + artwork grid
+- `/artwork/:id` — Individual artwork detail with zoom + share
+- `/login` — Admin login (email check + Google OAuth)
+- `/auth/callback` — OAuth callback
+- `/admin` — Admin panel (manage artworks, settings, access)
 
-## Tech Stack
+## Key Commands
 
-- React 19 + React Router DOM v7
-- Tailwind CSS v4 (custom theme: Cormorant Garamond serif, Inter sans, bone/charcoal palette)
-- Framer Motion (via `motion` package)
-- @supabase/supabase-js
-- qrcode.react (QR code generation for artworks)
-- lucide-react (icons)
+- `pnpm run typecheck` — full typecheck across all packages
+- `pnpm run build` — typecheck + build all packages
+- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from OpenAPI spec
+- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
+- `pnpm --filter @workspace/api-server run dev` — run API server locally
 
-## Development
-
-The app runs via the Replit workflow `artifacts/art-gallery: web`.
-Do not run `pnpm dev` at the workspace root — use the workflow system instead.
+See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
