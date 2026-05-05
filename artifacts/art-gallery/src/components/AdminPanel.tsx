@@ -51,26 +51,25 @@ export function AdminPanel({ user }: AdminPanelProps) {
   const [qrModalOpen, setQrModalOpen] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user) {
-      const unsubArtworks = artService.subscribeToArtworks((data) => {
-        setArtworks(data);
+    if (!user) return;
+    const unsubArtworks = artService.subscribeToArtworks((data) => {
+      setArtworks(data);
+    });
+    const unsubSettings = artService.subscribeToSettings((data) => {
+      setSettings(data);
+      setSettingsData({
+        galleryName: data.galleryName,
+        heroLine1: data.heroLine1,
+        heroLine2: data.heroLine2,
+        heroImageUrl: data.heroImageUrl || '',
+        footerDescription: data.footerDescription,
+        currency: data.currency
       });
-      const unsubSettings = artService.subscribeToSettings((data) => {
-        setSettings(data);
-        setSettingsData({
-          galleryName: data.galleryName,
-          heroLine1: data.heroLine1,
-          heroLine2: data.heroLine2,
-          heroImageUrl: data.heroImageUrl || '',
-          footerDescription: data.footerDescription,
-          currency: data.currency
-        });
-      });
-      return () => {
-        unsubArtworks();
-        unsubSettings();
-      };
-    }
+    });
+    return () => {
+      unsubArtworks();
+      unsubSettings();
+    };
   }, [user]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, isHero: boolean = false) => {
