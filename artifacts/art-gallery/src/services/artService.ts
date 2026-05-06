@@ -4,7 +4,8 @@ import { Artwork, SiteSettings } from '../types';
 const BUCKET_NAME = 'artworks';
 
 export const artService = {
-  async getAllArtworks(): Promise<Artwork[]> {
+  // Cambiado de getAllArtworks a getArtworks para coincidir con AdminPanel
+  async getArtworks(): Promise<Artwork[]> {
     try {
       const { data, error } = await supabase
         .from('artworks')
@@ -57,140 +58,86 @@ export const artService = {
     }
   },
 
-  async uploadImage(file: File): Promise<string> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Debes iniciar sesión para subir imágenes.');
-
-    const safeName = file.name.replace(/[^a-z0-9.]/gi, '_').toLowerCase();
-    const timestamp = Date.now();
-    const path = `artworks/${user.id}/${timestamp}_${safeName}`;
-
-    const uploadPromise = supabase.storage
-      .from(BUCKET_NAME)
-      .upload(path, file, { cacheControl: '3600', upsert: false });
-
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(
-        'La subida tardó demasiado y fue cancelada. ' +
-        'Asegúrate de que el bucket "artworks" exista en Supabase Storage ' +
-        'y que las políticas RLS permitan subidas.'
-      )), 20000)
-    );
-
-    try {
-      const { data, error } = await Promise.race([uploadPromise, timeoutPromise]);
-
-      if (error) {
-        const msg = (error as any).message || '';
-        if (msg.includes('Bucket not found') || msg.includes('not found')) {
-          throw new Error('El bucket "artworks" no existe en Supabase Storage. Créalo desde el panel de Supabase → Storage.');
-        }
-        if (msg.includes('JWT') || msg.includes('auth')) {
-          throw new Error('Error de autenticación. Por favor cierra sesión y vuelve a iniciarla.');
-        }
-        if (msg.includes('policy') || msg.includes('violates')) {
-          throw new Error('Sin permiso para subir imágenes. Verifica las políticas RLS del bucket en Supabase.');
-        }
-        throw new Error(msg || 'Error al subir la imagen.');
-      }
-
-      const { data: { publicUrl } } = supabase.storage
-        .from(BUCKET_NAME)
-        .getPublicUrl(data.path);
-
-      return publicUrl;
-    } catch (error) {
-      console.error('Storage upload error:', error);
-      throw error;
-    }
-  },
-
-  async createArtwork(data: Omit<Artwork, 'id' | 'createdAt' | 'updatedAt' | 'ownerId'>): Promise<string> {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError) throw new Error('Error de autenticación. Por favor cierra sesión y vuelve a entrar.');
-    if (!user) throw new Error('Debes iniciar sesión para publicar obras.');
-
-    const { data: result, error } = await supabase
+  async createArtwork(art: Omit<Artwork, 'id' | 'createdAt' | 'updatedAt'>): Promise<Artwork> {
+    const { data, error } = await supabase
       .from('artworks')
-      .insert({
-        name: data.name,
-        description: data.description,
-        technique: data.technique,
-        price: data.price,
-        image_url: data.imageUrl,
-        owner_id: user.id,
-      })
+      .insert([{
+        name: art.name,
+        description: art.description,
+        technique: art.technique,
+        price: art.price,
+        image_url: art.imageUrl,
+        owner_id: art.ownerId
+      }])
       .select()
       .single();
 
-    if (error) {
-      const msg = (error as any).message || '';
-      if (msg.includes('policy') || msg.includes('violates') || error.code === '42501') {
-        throw new Error('Sin permiso para crear obras. Verifica las políticas RLS de la tabla "artworks" en Supabase.');
-      }
-      if (msg.includes('relation') || msg.includes('does not exist')) {
-        throw new Error('La tabla "artworks" no existe en Supabase. Verifica que esté creada.');
-      }
-      throw new Error(msg || 'Error al guardar la obra.');
-    }
-
-    return result.id;
+    if (error) throw error;
+    return {
+      id: data.id,
+      name: data.name,
+      description: data.description,
+      technique: data.technique,
+      price: data.price,
+      imageUrl: data.image_url,
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at),
+      ownerId: data.owner_id,
+    } as Artwork;
   },
 
-  async updateArtwork(id: string, data: Partial<Omit<Artwork, 'id' | 'createdAt' | 'updatedAt' | 'ownerId'>>): Promise<void> {
-    try {
-      const updateData: Record<string, unknown> = {};
-      if (data.name !== undefined) updateData.name = data.name;
-      if (data.description !== undefined) updateData.description = data.description;
-      if (data.technique !== undefined) updateData.technique = data.technique;
-      if (data.price !== undefined) updateData.price = data.price;
-      if (data.imageUrl !== undefined) updateData.image_url = data.imageUrl;
+  async updateArtwork(id: string, art: Partial<Artwork>): Promise<Artwork> {
+    const { data, error } = await supabase
+      .from('artworks')
+      .update({
+        name: art.name,
+        description: art.description,
+        technique: art.technique,
+        price: art.price,
+        image_url: art.imageUrl,
+      })
+      .eq('id', id)
+      .select()
+      .single();
 
-      const { error } = await supabase
-        .from('artworks')
-        .update(updateData)
-        .eq('id', id);
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error updating artwork:', error);
-    }
+    if (error) throw error;
+    return {
+      id: data.id,
+      name: data.name,
+      description: data.description,
+      technique: data.technique,
+      price: data.price,
+      imageUrl: data.image_url,
+      createdAt: new Date(data.created_at),
+      updatedAt: new Date(data.updated_at),
+      ownerId: data.owner_id,
+    } as Artwork;
   },
 
   async deleteArtwork(id: string): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('artworks')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error deleting artwork:', error);
-    }
+    const { error } = await supabase
+      .from('artworks')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
   },
 
-  subscribeToArtworks(callback: (artworks: Artwork[]) => void) {
-    const channel = supabase
-      .channel('artworks-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'artworks',
-        },
-        () => {
-          this.getAllArtworks().then(callback);
-        }
-      )
-      .subscribe();
+  async uploadImage(file: File): Promise<string> {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const filePath = `${fileName}`;
 
-    this.getAllArtworks().then(callback);
+    const { error: uploadError } = await supabase.storage
+      .from(BUCKET_NAME)
+      .upload(filePath, file);
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage
+      .from(BUCKET_NAME)
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
   },
 
   async getSettings(): Promise<SiteSettings | null> {
@@ -201,13 +148,13 @@ export const artService = {
         .eq('id', '00000000-0000-0000-0000-000000000001')
         .single();
 
-      if (error) return null;
+      if (error) throw error;
 
       return {
         galleryName: data.gallery_name,
         heroLine1: data.hero_line1,
         heroLine2: data.hero_line2,
-        heroImageUrl: data.hero_image_url || undefined,
+        heroImageUrl: data.hero_image_url,
         footerDescription: data.footer_description,
         currency: data.currency,
         updatedAt: new Date(data.updated_at),
@@ -218,28 +165,37 @@ export const artService = {
     }
   },
 
-  async updateSettings(settings: Partial<SiteSettings>): Promise<void> {
+  // Ajustado para devolver SiteSettings en lugar de void
+  async updateSettings(settings: Partial<SiteSettings>): Promise<SiteSettings> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Must be logged in to update settings');
 
-    try {
-      const updateData: Record<string, unknown> = {};
-      if (settings.galleryName !== undefined) updateData.gallery_name = settings.galleryName;
-      if (settings.heroLine1 !== undefined) updateData.hero_line1 = settings.heroLine1;
-      if (settings.heroLine2 !== undefined) updateData.hero_line2 = settings.heroLine2;
-      if (settings.heroImageUrl !== undefined) updateData.hero_image_url = settings.heroImageUrl;
-      if (settings.footerDescription !== undefined) updateData.footer_description = settings.footerDescription;
-      if (settings.currency !== undefined) updateData.currency = settings.currency;
+    const updateData: Record<string, any> = {};
+    if (settings.galleryName !== undefined) updateData.gallery_name = settings.galleryName;
+    if (settings.heroLine1 !== undefined) updateData.hero_line1 = settings.heroLine1;
+    if (settings.heroLine2 !== undefined) updateData.hero_line2 = settings.heroLine2;
+    if (settings.heroImageUrl !== undefined) updateData.hero_image_url = settings.heroImageUrl;
+    if (settings.footerDescription !== undefined) updateData.footer_description = settings.footerDescription;
+    if (settings.currency !== undefined) updateData.currency = settings.currency;
 
-      const { error } = await supabase
-        .from('settings')
-        .update(updateData)
-        .eq('id', '00000000-0000-0000-0000-000000000001');
+    const { data, error } = await supabase
+      .from('settings')
+      .update(updateData)
+      .eq('id', '00000000-0000-0000-0000-000000000001')
+      .select()
+      .single();
 
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error updating settings:', error);
-    }
+    if (error) throw error;
+    
+    return {
+      galleryName: data.gallery_name,
+      heroLine1: data.hero_line1,
+      heroLine2: data.hero_line2,
+      heroImageUrl: data.hero_image_url,
+      footerDescription: data.footer_description,
+      currency: data.currency,
+      updatedAt: new Date(data.updated_at),
+    } as SiteSettings;
   },
 
   subscribeToSettings(callback: (settings: SiteSettings) => void) {
@@ -248,12 +204,15 @@ export const artService = {
       if (settings) callback(settings);
     };
 
+    const subscription = supabase
+      .channel('settings_changes')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'settings' }, fetchSettings)
+      .subscribe();
+
     fetchSettings();
 
-    const intervalId = setInterval(fetchSettings, 5000);
-
     return () => {
-      clearInterval(intervalId);
+      supabase.removeChannel(subscription);
     };
   }
 };
