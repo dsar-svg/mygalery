@@ -12,6 +12,12 @@ import { User } from '@supabase/supabase-js';
 import { SiteSettings } from './types';
 import { supabase } from './lib/supabase';
 
+// Función para evitar que la app se quede colgada esperando a la DB
+async function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  const timeout = new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms));
+  return Promise.race([promise, timeout]);
+}
+
 function Spinner({ message }: { message: string }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-bone-light">
@@ -27,29 +33,46 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null); // null = verificando, true/false = resultado
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
   useEffect(() => {
-    // 1. Obtener sesión inicial inmediatamente para evitar bloqueo
-    const initAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setUser(session.user);
-        const admin = await authService.isAdmin(session.user);
-        setIsAdmin(admin);
-      } else {
-        setIsAdmin(false);
+    const initApp = async () => {
+      try {
+        // 1. Obtener sesión inicial con tiempo límite
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          setUser(session.user);
+          // Si en 5 segundos la DB no confirma si es admin, asumimos false para no bloquear
+          const admin = await withTimeout(authService.isAdmin(session.user), 5000, false);
+          setIsAdmin(admin);
+        } else {
+          setIsAdmin(false);
+        }
+
+        // 2. Cargar settings con tiempo límite (evita el "Preparando exposición" infinito)
+        // Intentamos cargar los datos, si fallan, la app sigue con settings nulos
+        const settingsPromise = new Promise<void>((resolve) => {
+          artService.subscribeToSettings((data) => {
+            setSettings(data);
+            resolve();
+          });
+        });
+        await withTimeout(settingsPromise, 4000, null);
+
+      } catch (error) {
+        console.error("Error en inicialización:", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false); // Liberamos el spinner inicial lo antes posible
     };
 
-    initAuth();
+    initApp();
 
-    // 2. Escuchar cambios futuros (Login/Logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         setUser(session.user);
-        const admin = await authService.isAdmin(session.user);
+        const admin = await withTimeout(authService.isAdmin(session.user), 5000, false);
         setIsAdmin(admin);
       } else {
         setUser(null);
@@ -58,17 +81,12 @@ export default function App() {
       setLoading(false);
     });
 
-    const unsubSettings = artService.subscribeToSettings((data) => setSettings(data));
-
-    return () => {
-      subscription.unsubscribe();
-      unsubSettings();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
-  // Solo mostramos el spinner de "Cargando Galería" en el primer arranque
-  if (loading && !user) {
-    return <Spinner message="Cargando Galería..." />;
+  // Si loading es true pero ya tenemos lo básico, permitimos renderizar
+  if (loading && !settings && !user) {
+    return <Spinner message="Preparando exposición..." />;
   }
 
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
