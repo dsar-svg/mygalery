@@ -1,65 +1,54 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { authService } from '../lib/auth'; // Asegúrate de que la ruta sea correcta
 
 export function AuthCallback() {
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let timeout: ReturnType<typeof setTimeout>;
+    const handleAuth = async () => {
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) throw sessionError;
 
-    // Escuchar el evento de Supabase cuando procesa el token de la URL
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // Si el evento es SIGNED_IN y hay sesión, navegamos al admin
-      if (event === 'SIGNED_IN' && session) {
-        clearTimeout(timeout);
-        // Limpiamos la URL para que el token no se intente reutilizar
-        window.history.replaceState(null, '', window.location.pathname);
-        navigate('/admin', { replace: true });
-      }
-      
-      // Si por alguna razón el evento es SIGNED_OUT durante el callback
-      if (event === 'SIGNED_OUT') {
-        clearTimeout(timeout);
-        navigate('/login', { replace: true });
-      }
-    });
+        if (session?.user) {
+          // VALIDACIÓN DE SEGURIDAD:
+          // Verificamos si el correo de Google está en la tabla allowed_emails
+          const isAllowed = await authService.isAdmin(session.user);
 
-    // Verificación de respaldo en caso de que la sesión ya esté activa (ej. refresh)
-    supabase.auth.getSession().then(({ data: { session }, error: sessionError }) => {
-      if (sessionError) {
-        setError('Error al iniciar sesión. Por favor intenta de nuevo.');
-        setTimeout(() => navigate('/', { replace: true }), 3000);
-        return;
-      }
-      
-      if (session) {
-        clearTimeout(timeout);
-        window.history.replaceState(null, '', window.location.pathname);
-        navigate('/admin', { replace: true });
-      }
-    });
+          if (!isAllowed) {
+            // Si no está permitido, cerramos sesión de inmediato
+            await supabase.auth.signOut();
+            setError('Tu cuenta de Google no tiene acceso autorizado.');
+            setTimeout(() => navigate('/login', { replace: true }), 4000);
+            return;
+          }
 
-    // Timeout de seguridad por si Supabase tarda demasiado en responder
-    timeout = setTimeout(() => {
-      setError('El inicio de sesión tardó demasiado. Por favor intenta de nuevo.');
-      setTimeout(() => navigate('/', { replace: true }), 3000);
-    }, 10000);
-
-    // Limpieza al desmontar el componente
-    return () => {
-      clearTimeout(timeout);
-      subscription.unsubscribe();
+          // Si es válido, limpiamos URL y vamos al admin
+          window.history.replaceState(null, '', window.location.pathname);
+          navigate('/admin', { replace: true });
+        }
+      } catch (err: any) {
+        setError('Error en la autenticación. Intenta de nuevo.');
+        setTimeout(() => navigate('/login', { replace: true }), 3000);
+      }
     };
+
+    handleAuth();
   }, [navigate]);
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-bone-light">
-        <div className="text-center space-y-4">
-          <p className="text-red-500 font-serif text-xl">{error}</p>
-          <p className="text-sm opacity-60">Redirigiendo al inicio...</p>
+      <div className="min-h-screen flex items-center justify-center bg-bone-light p-6">
+        <div className="text-center space-y-4 max-w-sm">
+          <div className="bg-red-50 border border-red-100 p-6 rounded-3xl">
+            <p className="text-red-600 font-bold uppercase tracking-wider text-xs mb-2">Acceso Denegado</p>
+            <p className="text-charcoal opacity-70 text-sm leading-relaxed">{error}</p>
+          </div>
+          <p className="text-[10px] uppercase tracking-widest opacity-30 animate-pulse">Redirigiendo al login...</p>
         </div>
       </div>
     );
@@ -70,7 +59,7 @@ export function AuthCallback() {
       <div className="flex flex-col items-center gap-4">
         <div className="w-12 h-12 border-4 border-charcoal border-t-transparent rounded-full animate-spin"></div>
         <p className="text-charcoal font-serif italic text-lg text-center">
-          Procesando inicio de sesión...
+          Verificando credenciales...
         </p>
       </div>
     </div>
