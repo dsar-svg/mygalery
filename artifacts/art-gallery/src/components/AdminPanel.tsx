@@ -47,15 +47,24 @@ export function AdminPanel({ user }: AdminPanelProps) {
   const [printingArt, setPrintingArt] = useState<Artwork | null>(null);
 
   useEffect(() => {
-    // Verificación de seguridad para evitar el error de "not a function"
-    if (artService && typeof artService.getArtworks === 'function') {
-      artService.getArtworks().then(setArtworks).catch(console.error);
-      artService.getSettings().then(setSettings).catch(console.error);
-    } else {
-      console.error("artService no está cargado correctamente o faltan funciones.");
+  const loadData = async () => {
+    try {
+      // Cargamos todo en paralelo para mayor velocidad
+      const [artData, settingsData] = await Promise.all([
+        artService.getArtworks(),
+        artService.getSettings()
+      ]);
+      
+      setArtworks(artData);
+      setSettings(settingsData);
+    } catch (error) {
+      console.error("Error cargando datos iniciales:", error);
     }
-    loadAllowedEmails();
-  }, []);
+  };
+
+  loadData();
+  loadAllowedEmails();
+}, []);
 
   const loadAllowedEmails = async () => {
     const { data } = await supabase.from('allowed_emails').select('email');
