@@ -118,19 +118,21 @@ export default function App() {
           <Route path="auth/callback" element={<AuthCallback />} />
           
           <Route
-            path="admin"
-            element={
-              user ? (
-                // Mientras isAdmin sea null (verificando), mostramos Spinner en lugar de redirigir
+              path="admin"
+              element={
+                user ? (
+                // Si el estado es 'null', significa que estamos validando. 
+                // Nos quedamos aquí quietos mostrando el spinner.
                 isAdmin === null ? (
                   <Spinner message="Sincronizando sesión..." />
-                ) : isAdmin ? (
+                ) : isAdmin === true ? (
                   <AdminPanel user={user} />
                 ) : (
-                  // Solo redirige si isAdmin es estrictamente false
+                  // SOLO si el servidor confirma que NO eres admin, te saca.
                   <Navigate to="/" replace />
                 )
               ) : (
+                // Si no hay usuario del todo, al login.
                 <Navigate to="/login" replace />
               )
             }
