@@ -4,7 +4,7 @@ import { Artwork, SiteSettings } from '../types';
 const BUCKET_NAME = 'artworks';
 
 export const artService = {
-  // Cambiado de getAllArtworks a getArtworks para coincidir con AdminPanel
+  // 1. CAMBIADO: Antes era getAllArtworks, ahora es getArtworks para que AdminPanel lo encuentre
   async getArtworks(): Promise<Artwork[]> {
     try {
       const { data, error } = await supabase
@@ -165,7 +165,7 @@ export const artService = {
     }
   },
 
-  // Ajustado para devolver SiteSettings en lugar de void
+  // 2. CAMBIADO: Ahora devuelve SiteSettings para que la UI se actualice al instante
   async updateSettings(settings: Partial<SiteSettings>): Promise<SiteSettings> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Must be logged in to update settings');
