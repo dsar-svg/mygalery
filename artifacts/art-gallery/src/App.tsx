@@ -42,7 +42,7 @@ export default function App() {
   useEffect(() => {
     // 2. FUNCIÓN DE VALIDACIÓN ÚNICA
     const validateAdminOnce = async (currUser: User) => {
-      // CORTOCIRCUITO: Si ya somos admin en este renderizado, no volvemos a consultar la DB
+      // CORTOCIRCUITO: Si ya confirmamos que es admin en esta sesión, no volvemos a consultar la DB
       if (isAdmin === true) return;
 
       try {
@@ -76,20 +76,19 @@ export default function App() {
 
     initApp();
 
-    // 3. ESCUCHA DE EVENTOS (Filtrada para evitar ráfagas al volver de pestaña)
+    // 3. ESCUCHA DE EVENTOS: Ajustada para evitar disparos repetitivos
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth Event detectado:", event);
+      // Si el evento es un refresco de token y ya somos admin, no hacemos nada
+      if (event === 'TOKEN_REFRESHED' && isAdmin === true) return;
 
       if (session?.user) {
-        // Actualizamos usuario si hay sesión activa
         setUser(session.user);
         
-        // Solo re-validamos si isAdmin es null (primera carga) o si es un login nuevo explícito
+        // Solo re-validamos si el estado es desconocido o si es un inicio de sesión explícito
         if (isAdmin === null || event === 'SIGNED_IN') {
           await validateAdminOnce(session.user);
         }
       } else if (event === 'SIGNED_OUT') {
-        // Limpieza total solo en cierre de sesión real
         setUser(null);
         setIsAdmin(false);
         localStorage.removeItem('is_admin_session');
@@ -98,14 +97,14 @@ export default function App() {
       setLoading(false);
     });
 
-    // Suscripción a settings del sitio
+    // Suscripción a los ajustes del sitio
     const unsubSettings = artService.subscribeToSettings((data) => setSettings(data));
 
     return () => {
       subscription.unsubscribe();
       unsubSettings();
     };
-  }, [isAdmin]); // Dependencia clave para el cortocircuito
+  }, [isAdmin]); 
 
   if (loading && !settings && !user) {
     return <Spinner message="Preparando exposición..." />;
@@ -120,6 +119,7 @@ export default function App() {
           <Route index element={<LandingPage settings={settings} />} />
           <Route path="artwork/:id" element={<ArtworkDetail settings={settings} />} />
           <Route path="login" element={<Login />} />
+          {/* Ruta para procesar el redireccionamiento de Google */}
           <Route path="auth/callback" element={<AuthCallback />} />
           
           <Route
