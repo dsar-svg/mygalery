@@ -12,7 +12,6 @@ import { User } from '@supabase/supabase-js';
 import { SiteSettings } from './types';
 import { supabase } from './lib/supabase';
 
-// Eliminamos withTimeout agresivo para evitar falsos negativos en la validación
 function Spinner({ message }: { message: string }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-bone-light">
@@ -24,45 +23,42 @@ function Spinner({ message }: { message: string }) {
   );
 }
 
-type AdminStatus = 'checking' | 'yes' | 'no';
-
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [loading, setLoading] = useState(true);
-  const [adminStatus, setAdminStatus] = useState<AdminStatus>('checking');
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null); // null = verificando, true/false = resultado
 
   useEffect(() => {
-    // Escuchamos cambios de auth (incluye la carga inicial de sesión persistente)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth Event:", event); // Para depuración
-
+    // 1. Obtener sesión inicial inmediatamente para evitar bloqueo
+    const initAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         setUser(session.user);
-        
-        // Solo verificamos si no hemos confirmado ya que somos admin
-        // Esto evita que al navegar o refrescar el token nos mande al login por error
-        try {
-          const admin = await authService.isAdmin(session.user);
-          setAdminStatus(admin ? 'yes' : 'no');
-        } catch (error) {
-          console.error("Error verificando permisos:", error);
-          // En caso de error de red, si ya teníamos sesión, intentamos mantener 'checking'
-          // o solo marcar 'no' si es estrictamente necesario (ej: INITIAL_SESSION)
-          if (event === 'INITIAL_SESSION') setAdminStatus('no');
-        }
+        const admin = await authService.isAdmin(session.user);
+        setIsAdmin(admin);
       } else {
-        // No hay sesión activa
-        setUser(null);
-        setAdminStatus('no');
+        setIsAdmin(false);
       }
+      setLoading(false); // Liberamos el spinner inicial lo antes posible
+    };
 
+    initAuth();
+
+    // 2. Escuchar cambios futuros (Login/Logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+        const admin = await authService.isAdmin(session.user);
+        setIsAdmin(admin);
+      } else {
+        setUser(null);
+        setIsAdmin(false);
+      }
       setLoading(false);
     });
 
-    const unsubSettings = artService.subscribeToSettings((data) => {
-      setSettings(data);
-    });
+    const unsubSettings = artService.subscribeToSettings((data) => setSettings(data));
 
     return () => {
       subscription.unsubscribe();
@@ -70,7 +66,8 @@ export default function App() {
     };
   }, []);
 
-  if (loading) {
+  // Solo mostramos el spinner de "Cargando Galería" en el primer arranque
+  if (loading && !user) {
     return <Spinner message="Cargando Galería..." />;
   }
 
@@ -87,11 +84,17 @@ export default function App() {
           <Route
             path="admin"
             element={
-              adminStatus === 'checking'
-                ? <Spinner message="Verificando acceso..." />
-                : adminStatus === 'yes'
-                  ? <AdminPanel user={user} />
-                  : <Navigate to="/login" replace />
+              user ? (
+                isAdmin === null ? (
+                  <Spinner message="Verificando permisos..." />
+                ) : isAdmin ? (
+                  <AdminPanel user={user} />
+                ) : (
+                  <Navigate to="/" replace />
+                )
+              ) : (
+                <Navigate to="/login" replace />
+              )
             }
           />
         </Route>
