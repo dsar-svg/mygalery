@@ -39,60 +39,36 @@ type AdminStatus = 'checking' | 'yes' | 'no';
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [settings, setSettings] = useState<SiteSettings | null>(null);
-  // True while the initial getSession() + admin check is running on first load
+  // True until the first auth state event is received and processed
   const [loading, setLoading] = useState(true);
   const [adminStatus, setAdminStatus] = useState<AdminStatus>('checking');
-  const [isAuthCallback, setIsAuthCallback] = useState(false);
 
   useEffect(() => {
-    const hasAuthInUrl =
-      window.location.hash.includes('access_token') ||
-      window.location.search.includes('code');
-    if (hasAuthInUrl) setIsAuthCallback(true);
-
-    const run = async () => {
-      try {
-        const { data: { session } } = await withTimeout(
-          supabase.auth.getSession(),
-          3000,
-          { data: { session: null } } as any,
-        );
-
-        if (session?.user) {
-          setUser(session.user);
-          const admin = await withTimeout(authService.isAdmin(session.user), 4000, false);
-          setAdminStatus(admin ? 'yes' : 'no');
-        } else {
-          setUser(null);
-          setAdminStatus('no');
-        }
-      } catch {
-        try { await supabase.auth.signOut(); } catch { /* ignore */ }
-        setUser(null);
-        setAdminStatus('no');
-      } finally {
-        setIsAuthCallback(false);
-        setLoading(false);
-      }
-    };
-
-    run();
-
+    // onAuthStateChange fires INITIAL_SESSION immediately after Supabase finishes
+    // initialization (including PKCE code exchange if detectSessionInUrl:true).
+    // This is the single source of truth — no separate getSession() call needed.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          // Mark as checking immediately so /admin route shows spinner, not redirect
-          setAdminStatus('checking');
-          const admin = await withTimeout(authService.isAdmin(session.user), 4000, false);
-          setAdminStatus(admin ? 'yes' : 'no');
-        } else {
-          setAdminStatus('no');
-        }
-      } else if (event === 'SIGNED_OUT') {
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setAdminStatus('no');
+        setLoading(false);
+        return;
+      }
+
+      if (session?.user) {
+        setUser(session.user);
+        setAdminStatus('checking');
+        // Give the DB query plenty of time (8s). On auth callback the PKCE exchange
+        // already completed before this event fires, so we only pay for the DB round-trip.
+        const admin = await withTimeout(authService.isAdmin(session.user), 8000, false);
+        setAdminStatus(admin ? 'yes' : 'no');
+      } else {
         setUser(null);
         setAdminStatus('no');
       }
+
+      // Mark loading done after the first event (INITIAL_SESSION, SIGNED_IN, etc.)
+      setLoading(false);
     });
 
     const unsubSettings = artService.subscribeToSettings((data) => {
@@ -105,10 +81,8 @@ export default function App() {
     };
   }, []);
 
-  if (loading || isAuthCallback) {
-    return (
-      <Spinner message={isAuthCallback ? 'Procesando inicio de sesión...' : 'Cargando Galería...'} />
-    );
+  if (loading) {
+    return <Spinner message="Cargando Galería..." />;
   }
 
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
