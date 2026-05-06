@@ -12,7 +12,7 @@ import { User } from '@supabase/supabase-js';
 import { SiteSettings } from './types';
 import { supabase } from './lib/supabase';
 
-// Función auxiliar para evitar bloqueos infinitos por latencia de red
+// Función para evitar bloqueos por latencia de red
 async function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
   const timeout = new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms));
   return Promise.race([promise, timeout]);
@@ -33,12 +33,12 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null); // null = verificando
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
   useEffect(() => {
     const initApp = async () => {
       try {
-        // 1. Validar sesión existente de forma segura
+        // 1. Validar sesión persistente al arrancar
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError || !session) {
@@ -46,24 +46,21 @@ export default function App() {
           setIsAdmin(false);
         } else {
           setUser(session.user);
-          // Validamos si es admin con un margen de 5 segundos
           const admin = await withTimeout(authService.isAdmin(session.user), 5000, false);
           setIsAdmin(admin);
         }
 
-        // 2. Carga de configuración del sitio (Settings)
+        // 2. Cargar configuración del sitio
         const settingsPromise = new Promise<void>((resolve) => {
-          const unsub = artService.subscribeToSettings((data) => {
+          artService.subscribeToSettings((data) => {
             setSettings(data);
             resolve();
           });
-          // Guardamos la referencia para limpiar si fuera necesario, 
-          // aunque aquí lo manejamos en el retorno del useEffect
         });
         await withTimeout(settingsPromise, 4000, null);
 
       } catch (error) {
-        console.error("Error crítico en inicialización:", error);
+        console.error("Error en inicialización:", error);
         setIsAdmin(false);
       } finally {
         setLoading(false);
@@ -72,10 +69,9 @@ export default function App() {
 
     initApp();
 
-    // 3. Escuchar cambios de estado (Login, Logout, Token Refresh)
+    // 3. Escuchar cambios de autenticación (Refresco de token, Logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log("Auth Event:", event);
-      
       if (session?.user) {
         setUser(session.user);
         const admin = await withTimeout(authService.isAdmin(session.user), 5000, false);
@@ -84,16 +80,28 @@ export default function App() {
         setUser(null);
         setIsAdmin(false);
       }
-      // Aseguramos que el loading se apague tras cualquier cambio de auth
       setLoading(false);
     });
 
+    // 4. Sincronizar sesión al volver a la pestaña (Evita el Stale Session)
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible' && supabase.auth.getSession()) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          const admin = await withTimeout(authService.isAdmin(session.user), 3000, isAdmin);
+          setIsAdmin(admin);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, []);
+  }, [isAdmin]); 
 
-  // Spinner inicial solo si no hay nada cargado aún
   if (loading && !settings && !user) {
     return <Spinner message="Preparando exposición..." />;
   }
@@ -109,16 +117,17 @@ export default function App() {
           <Route path="login" element={<Login />} />
           <Route path="auth/callback" element={<AuthCallback />} />
           
-          {/* Ruta Protegida de Administración[cite: 8] */}
           <Route
             path="admin"
             element={
               user ? (
+                // Mientras isAdmin sea null (verificando), mostramos Spinner en lugar de redirigir
                 isAdmin === null ? (
-                  <Spinner message="Verificando permisos de acceso..." />
+                  <Spinner message="Sincronizando sesión..." />
                 ) : isAdmin ? (
                   <AdminPanel user={user} />
                 ) : (
+                  // Solo redirige si isAdmin es estrictamente false
                   <Navigate to="/" replace />
                 )
               ) : (
