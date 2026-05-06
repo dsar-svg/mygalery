@@ -9,43 +9,45 @@ export function AuthCallback() {
   useEffect(() => {
     let timeout: ReturnType<typeof setTimeout>;
 
-    // Listen for Supabase to process the URL token and fire SIGNED_IN
+    // Escuchar el evento de Supabase cuando procesa el token de la URL
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // Si el evento es SIGNED_IN y hay sesión, navegamos al admin
       if (event === 'SIGNED_IN' && session) {
         clearTimeout(timeout);
-        subscription.unsubscribe();
-        // Clean the URL so the token is never replayed on future reloads
+        // Limpiamos la URL para que el token no se intente reutilizar
         window.history.replaceState(null, '', window.location.pathname);
         navigate('/admin', { replace: true });
       }
+      
+      // Si por alguna razón el evento es SIGNED_OUT durante el callback
       if (event === 'SIGNED_OUT') {
         clearTimeout(timeout);
-        subscription.unsubscribe();
         navigate('/login', { replace: true });
       }
     });
 
-    // Also check if a valid session already exists (e.g. page refresh)
+    // Verificación de respaldo en caso de que la sesión ya esté activa (ej. refresh)
     supabase.auth.getSession().then(({ data: { session }, error: sessionError }) => {
       if (sessionError) {
         setError('Error al iniciar sesión. Por favor intenta de nuevo.');
         setTimeout(() => navigate('/', { replace: true }), 3000);
         return;
       }
+      
       if (session) {
         clearTimeout(timeout);
-        subscription.unsubscribe();
         window.history.replaceState(null, '', window.location.pathname);
         navigate('/admin', { replace: true });
       }
     });
 
+    // Timeout de seguridad por si Supabase tarda demasiado en responder
     timeout = setTimeout(() => {
-      subscription.unsubscribe();
       setError('El inicio de sesión tardó demasiado. Por favor intenta de nuevo.');
       setTimeout(() => navigate('/', { replace: true }), 3000);
     }, 10000);
 
+    // Limpieza al desmontar el componente
     return () => {
       clearTimeout(timeout);
       subscription.unsubscribe();
