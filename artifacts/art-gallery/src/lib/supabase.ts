@@ -19,8 +19,10 @@ export const supabase = isMisconfigured
     })
   : createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
-        detectSessionInUrl: true,
-        persistSession: true,
         autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+        // Forzamos el uso de localStorage para asegurar persistencia entre rutas
+        storage: window.localStorage 
       },
     });
