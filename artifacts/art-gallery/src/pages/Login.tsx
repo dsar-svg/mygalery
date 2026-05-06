@@ -1,49 +1,55 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { ArrowLeft, Mail, Chrome } from 'lucide-react';
+import { ArrowLeft, Mail, Chrome, CheckCircle2 } from 'lucide-react';
 
 export function Login() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
 
-  const handleEnter = async (e: React.FormEvent) => {
+  // 1. Lógica para entrar mediante Magic Link (Correo Directo)
+  const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
     try {
-      const { data } = await supabase
+      // Verificamos primero si el correo está en la lista blanca
+      const { data, error: tableError } = await supabase
         .from('allowed_emails')
         .select('email')
         .eq('email', email.trim().toLowerCase())
         .single();
 
-      if (!data) {
+      if (tableError || !data) {
         setError('Este correo no tiene acceso autorizado.');
         setLoading(false);
         return;
       }
 
-      const { error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+      // Enviamos el enlace mágico
+      const { error: authError } = await supabase.auth.signInWithOtp({
+        email: email.trim().toLowerCase(),
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-          queryParams: { login_hint: email.trim() },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 
-      if (oauthError) throw oauthError;
+      if (authError) throw authError;
+
+      setEmailSent(true);
     } catch (err: any) {
-      if (err.message !== 'No rows found') {
-        setError(err.message || 'Error al verificar acceso');
-      }
+      setError(err.message || 'Error al procesar el acceso');
+    } finally {
       setLoading(false);
     }
   };
 
+  // 2. Lógica para entrar con Google
   const handleGoogleLogin = async () => {
+    setError(null);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -80,64 +86,90 @@ export function Login() {
               Acceso Privado
             </h1>
             <p className="text-sm text-charcoal opacity-50 leading-relaxed">
-              Ingresa tu correo para acceder al panel de administración
+              {emailSent 
+                ? "Verifica tu bandeja de entrada para continuar" 
+                : "Ingresa tu correo para acceder al panel de administración"}
             </p>
           </div>
 
-          <form onSubmit={handleEnter} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-[9px] font-black uppercase tracking-[0.3em] opacity-40 ml-1">
-                Correo Electrónico
-              </label>
-              <div className="relative">
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="tu@correo.com"
-                  className="w-full bg-white border border-charcoal/10 rounded-2xl p-5 pl-14 focus:border-charcoal/30 outline-none transition-all placeholder:opacity-30 font-mono text-sm"
-                />
-                <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 opacity-30" />
+          {emailSent ? (
+            <div className="bg-white border border-charcoal/5 rounded-3xl p-8 text-center space-y-6 shadow-sm animate-in fade-in zoom-in duration-300">
+              <div className="flex justify-center">
+                <CheckCircle2 className="w-12 h-12 text-green-800/50" />
               </div>
-            </div>
-
-            {error && (
-              <div className="bg-red-50 text-red-600 text-sm p-4 rounded-xl text-center">
-                {error}
+              <div className="space-y-2">
+                <p className="text-charcoal font-medium">¡Enlace enviado!</p>
+                <p className="text-xs text-charcoal/40 leading-relaxed">
+                  Hemos enviado un acceso directo a <strong>{email}</strong>.<br/>
+                  Haz clic en el botón del correo para entrar.
+                </p>
               </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-charcoal text-bone-light py-5 rounded-full uppercase tracking-[0.3em] text-[10px] font-bold hover:bg-charcoal/90 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Verificando...' : 'Entrar'}
-            </button>
-          </form>
-
-          <div className="relative my-8">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-charcoal/10"></div>
+              <button
+                onClick={() => setEmailSent(false)}
+                className="text-[9px] uppercase tracking-[0.2em] font-black opacity-30 hover:opacity-100 transition-all"
+              >
+                ¿No recibiste nada? Reintentar
+              </button>
             </div>
-            <div className="relative flex justify-center">
-              <span className="bg-bone-light px-4 text-[9px] font-black uppercase tracking-[0.3em] opacity-30">
-                O continúa con
-              </span>
-            </div>
-          </div>
+          ) : (
+            <>
+              <form onSubmit={handleEmailLogin} className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[9px] font-black uppercase tracking-[0.3em] opacity-40 ml-1">
+                    Correo Electrónico
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="tu@correo.com"
+                      className="w-full bg-white border border-charcoal/10 rounded-2xl p-5 pl-14 focus:border-charcoal/30 outline-none transition-all placeholder:opacity-30 font-mono text-sm"
+                    />
+                    <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 opacity-30" />
+                  </div>
+                </div>
 
-          <button
-            onClick={handleGoogleLogin}
-            className="w-full bg-white border border-charcoal/20 text-charcoal py-5 rounded-full uppercase tracking-[0.2em] text-[10px] font-bold hover:bg-charcoal/5 transition-all shadow-md flex items-center justify-center gap-3"
-          >
-            <Chrome className="w-4 h-4" />
-            Google
-          </button>
+                {error && (
+                  <div className="bg-red-50 text-red-600 text-[11px] font-bold uppercase tracking-wider p-4 rounded-xl text-center border border-red-100">
+                    {error}
+                  </div>
+                )}
 
-          <p className="text-center text-[9px] opacity-30 mt-8 leading-relaxed">
-            Solo los usuarios autorizados pueden acceder al panel de administración
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-charcoal text-bone-light py-5 rounded-full uppercase tracking-[0.3em] text-[10px] font-bold hover:bg-charcoal/90 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? 'Verificando...' : 'Entrar'}
+                </button>
+              </form>
+
+              <div className="relative my-10">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-charcoal/10"></div>
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="bg-bone-light px-4 text-[9px] font-black uppercase tracking-[0.3em] opacity-30">
+                    O continúa con
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleGoogleLogin}
+                className="w-full bg-white border border-charcoal/20 text-charcoal py-5 rounded-full uppercase tracking-[0.2em] text-[10px] font-bold hover:bg-charcoal/5 transition-all shadow-md flex items-center justify-center gap-3"
+              >
+                <Chrome className="w-4 h-4" />
+                Google
+              </button>
+            </>
+          )}
+
+          <p className="text-center text-[9px] opacity-30 mt-10 leading-relaxed uppercase tracking-widest">
+            Solo personal autorizado
           </p>
         </div>
       </div>
