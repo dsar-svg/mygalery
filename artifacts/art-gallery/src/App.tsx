@@ -12,6 +12,7 @@ import { User } from '@supabase/supabase-js';
 import { SiteSettings } from './types';
 import { supabase } from './lib/supabase';
 
+// Helper para evitar que la app se cuelgue por red lenta
 async function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
   const timeout = new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms));
   return Promise.race([promise, timeout]);
@@ -33,18 +34,29 @@ export default function App() {
   const [settings, setSettings] = useState<SiteSettings | null>(null);
   const [loading, setLoading] = useState(true);
   
-  // 1. MEMORIA INICIAL: Leemos si ya éramos admin para evitar el rebote al Home
+  // 1. MEMORIA SÍNCRONA: Leemos el localStorage para evitar el rebote al Home al refrescar
   const [isAdmin, setIsAdmin] = useState<boolean | null>(() => {
     return localStorage.getItem('is_admin_session') === 'true' ? true : null;
   });
 
   useEffect(() => {
-    const checkAdmin = async (u: User) => {
-      // Validamos sin resetear el estado a null si ya tenemos un true
-      const result = await withTimeout(authService.isAdmin(u), 5000, isAdmin === true);
-      setIsAdmin(result);
-      if (result) localStorage.setItem('is_admin_session', 'true');
-      else localStorage.removeItem('is_admin_session');
+    // 2. FUNCIÓN DE VALIDACIÓN ÚNICA
+    const validateAdminOnce = async (currUser: User) => {
+      // CORTOCIRCUITO: Si ya somos admin en este renderizado, no volvemos a consultar la DB
+      if (isAdmin === true) return;
+
+      try {
+        const result = await withTimeout(authService.isAdmin(currUser), 5000, false);
+        setIsAdmin(result);
+        
+        if (result) {
+          localStorage.setItem('is_admin_session', 'true');
+        } else {
+          localStorage.removeItem('is_admin_session');
+        }
+      } catch (error) {
+        console.error("Error validando admin:", error);
+      }
     };
 
     const initApp = async () => {
@@ -52,7 +64,7 @@ export default function App() {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           setUser(session.user);
-          await checkAdmin(session.user);
+          await validateAdminOnce(session.user);
         } else {
           setIsAdmin(false);
           localStorage.removeItem('is_admin_session');
@@ -64,21 +76,36 @@ export default function App() {
 
     initApp();
 
+    // 3. ESCUCHA DE EVENTOS (Filtrada para evitar ráfagas al volver de pestaña)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth Event:", event);
+      console.log("Auth Event detectado:", event);
+
       if (session?.user) {
+        // Actualizamos usuario si hay sesión activa
         setUser(session.user);
-        // Si ya somos admin confirmado, no bloqueamos la interfaz
-        await checkAdmin(session.user);
-      } else {
+        
+        // Solo re-validamos si isAdmin es null (primera carga) o si es un login nuevo explícito
+        if (isAdmin === null || event === 'SIGNED_IN') {
+          await validateAdminOnce(session.user);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        // Limpieza total solo en cierre de sesión real
         setUser(null);
         setIsAdmin(false);
         localStorage.removeItem('is_admin_session');
       }
+      
+      setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    // Suscripción a settings del sitio
+    const unsubSettings = artService.subscribeToSettings((data) => setSettings(data));
+
+    return () => {
+      subscription.unsubscribe();
+      unsubSettings();
+    };
+  }, [isAdmin]); // Dependencia clave para el cortocircuito
 
   if (loading && !settings && !user) {
     return <Spinner message="Preparando exposición..." />;
@@ -99,7 +126,8 @@ export default function App() {
             path="admin"
             element={
               user ? (
-                // 2. LÓGICA DE PROTECCIÓN: No redirigimos si isAdmin es null o true
+                // 4. LÓGICA DE NAVEGACIÓN PACIENTE: 
+                // Solo sacamos al usuario si isAdmin es 'false' confirmado.
                 isAdmin === false ? (
                   <Navigate to="/" replace />
                 ) : isAdmin === true ? (
