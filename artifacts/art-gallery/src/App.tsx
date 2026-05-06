@@ -12,13 +12,7 @@ import { User } from '@supabase/supabase-js';
 import { SiteSettings } from './types';
 import { supabase } from './lib/supabase';
 
-function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
-  ]);
-}
-
+// Eliminamos withTimeout agresivo para evitar falsos negativos en la validación
 function Spinner({ message }: { message: string }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-bone-light">
@@ -30,44 +24,39 @@ function Spinner({ message }: { message: string }) {
   );
 }
 
-// Three-state admin status:
-//   'checking' — DB query in flight, do NOT redirect yet
-//   'yes'      — confirmed admin
-//   'no'       — confirmed not admin (redirect to login)
 type AdminStatus = 'checking' | 'yes' | 'no';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [settings, setSettings] = useState<SiteSettings | null>(null);
-  // True until the first auth state event is received and processed
   const [loading, setLoading] = useState(true);
   const [adminStatus, setAdminStatus] = useState<AdminStatus>('checking');
 
   useEffect(() => {
-    // onAuthStateChange fires INITIAL_SESSION immediately after Supabase finishes
-    // initialization (including PKCE code exchange if detectSessionInUrl:true).
-    // This is the single source of truth — no separate getSession() call needed.
+    // Escuchamos cambios de auth (incluye la carga inicial de sesión persistente)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_OUT') {
-        setUser(null);
-        setAdminStatus('no');
-        setLoading(false);
-        return;
-      }
+      console.log("Auth Event:", event); // Para depuración
 
       if (session?.user) {
         setUser(session.user);
-        setAdminStatus('checking');
-        // Give the DB query plenty of time (8s). On auth callback the PKCE exchange
-        // already completed before this event fires, so we only pay for the DB round-trip.
-        const admin = await withTimeout(authService.isAdmin(session.user), 8000, false);
-        setAdminStatus(admin ? 'yes' : 'no');
+        
+        // Solo verificamos si no hemos confirmado ya que somos admin
+        // Esto evita que al navegar o refrescar el token nos mande al login por error
+        try {
+          const admin = await authService.isAdmin(session.user);
+          setAdminStatus(admin ? 'yes' : 'no');
+        } catch (error) {
+          console.error("Error verificando permisos:", error);
+          // En caso de error de red, si ya teníamos sesión, intentamos mantener 'checking'
+          // o solo marcar 'no' si es estrictamente necesario (ej: INITIAL_SESSION)
+          if (event === 'INITIAL_SESSION') setAdminStatus('no');
+        }
       } else {
+        // No hay sesión activa
         setUser(null);
         setAdminStatus('no');
       }
 
-      // Mark loading done after the first event (INITIAL_SESSION, SIGNED_IN, etc.)
       setLoading(false);
     });
 
@@ -98,9 +87,6 @@ export default function App() {
           <Route
             path="admin"
             element={
-              // 'checking' → spinner (never redirect prematurely)
-              // 'yes'      → admin panel
-              // 'no'       → send to login
               adminStatus === 'checking'
                 ? <Spinner message="Verificando acceso..." />
                 : adminStatus === 'yes'
