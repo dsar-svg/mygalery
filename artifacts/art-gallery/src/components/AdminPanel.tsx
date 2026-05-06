@@ -520,39 +520,37 @@ export function AdminPanel({ user }: AdminPanelProps) {
                 <div className="space-y-3">
                   <label className="text-[9px] font-black uppercase tracking-[0.3em] opacity-30 px-1">Técnica</label>
                   <input
-                        required
-                        type="text" // Cambiamos a text para tener control total sobre el tipeo
-                        inputMode="numeric" // Optimiza el teclado en móviles
-                        placeholder="2500"
-                        className="w-full bg-bone-light border border-charcoal/5 rounded-2xl p-5 focus:bg-white focus:border-charcoal/20 outline-none transition-all placeholder:opacity-30 font-mono text-sm"
-                        value={formData.price === 0 ? '' : formData.price} // Evita que aparezca un '0' por defecto si prefieres el campo vacío
-                        onKeyDown={(e) => {
-                          // Bloquea caracteres que type="number" normalmente permite pero no queremos (como la 'e' o signos)
-                          if (['e', 'E', '+', '-'].includes(e.key)) {
-                            e.preventDefault();
-                          }
-                        }}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          // Solo permite números. Si se intenta pegar texto o escribir letras, se eliminan instantáneamente.
-                          const cleanVal = val.replace(/[^0-9]/g, '');
-                          setFormData({ ...formData, price: Number(cleanVal) });
-                        }}
-                      />
+                    type="text"
+                    placeholder="Óleo sobre lienzo, Acrílico, Acuarela..."
+                    className="w-full bg-bone-light border border-charcoal/5 rounded-2xl p-5 focus:bg-white focus:border-charcoal/20 outline-none transition-all placeholder:opacity-30 font-serif text-sm"
+                    value={formData.technique}
+                    onChange={(e) => setFormData({ ...formData, technique: e.target.value })}
+                  />
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-[9px] font-black uppercase tracking-[0.3em] opacity-30 px-1">Precio</label>
-                  <input
-                    required
-                    type="number"
-                    placeholder="2500"
-                    className="w-full bg-bone-light border border-charcoal/5 rounded-2xl p-5 focus:bg-white focus:border-charcoal/20 outline-none transition-all placeholder:opacity-30 font-mono text-sm"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
-                  />
-                </div>
-              </div>
+                    <label className="text-[9px] font-black uppercase tracking-[0.3em] opacity-30 px-1">Precio</label>
+                    <input
+                      required
+                      type="text" // Cambiamos a text para tener control total sobre el tipeo
+                      inputMode="numeric" // Optimiza el teclado en móviles
+                      placeholder="2500"
+                      className="w-full bg-bone-light border border-charcoal/5 rounded-2xl p-5 focus:bg-white focus:border-charcoal/20 outline-none transition-all placeholder:opacity-30 font-mono text-sm"
+                      value={formData.price === 0 ? '' : formData.price} // Evita que aparezca un '0' por defecto si prefieres el campo vacío
+                      onKeyDown={(e) => {
+                        // Bloquea caracteres que type="number" normalmente permite pero no queremos (como la 'e' o signos)
+                        if (['e', 'E', '+', '-'].includes(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        // Solo permite números. Si se intenta pegar texto o escribir letras, se eliminan instantáneamente.
+                        const cleanVal = val.replace(/[^0-9]/g, '');
+                        setFormData({ ...formData, price: Number(cleanVal) });
+                      }}
+                    />
+                  </div>
 
               <div className="space-y-8 flex flex-col h-full justify-between">
                 <div className="space-y-4">
