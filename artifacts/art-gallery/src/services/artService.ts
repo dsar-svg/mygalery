@@ -16,6 +16,7 @@ export const artService = {
       return data.map((item: any) => ({
         id: item.id,
         name: item.name,
+        artist: item.artist,
         description: item.description,
         technique: item.technique,
         price: item.price,
