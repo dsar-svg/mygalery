@@ -96,7 +96,7 @@ export function ArtworkDetail({ settings }: ArtworkDetailProps) {
             <div className="flex flex-col space-y-4 pt-4">
             {art.artist && (
               <p className="text-xl md:text-2xl font-serif opacity-60 mt-4 italic">
-                por {art.artist}
+                {art.artist}
               </p>
             )}
               <p className="text-4xl font-light tracking-tighter opacity-100 italic font-serif">{formatPrice(art.price, settings?.currency)}</p>
