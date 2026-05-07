@@ -64,11 +64,11 @@ export function ArtworkDetail({ settings }: ArtworkDetailProps) {
           className="space-y-12"
         >
           <div className="aspect-[4/5] overflow-hidden bg-white shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] relative group rounded-sm p-4">
-            <div className="w-full h-full overflow-hidden">
+            <div className="w-full h-full flex items-center justify-center bg-white/50">
                <img 
                  src={art.imageUrl} 
                  alt={art.name}
-                 className="w-full h-full object-cover grayscale-[0.2] hover:grayscale-0 transition-all duration-1000"
+                 className="max-w-full max-h-full object-contain grayscale-[0.2] hover:grayscale-0 transition-all duration-1000"
                  referrerPolicy="no-referrer"
                />
             </div>
