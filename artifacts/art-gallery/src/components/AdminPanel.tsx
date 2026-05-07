@@ -508,6 +508,18 @@ export function AdminPanel({ user }: AdminPanelProps) {
                   />
                 </div>
 
+              <div className="space-y-3">
+                    <label className="text-[9px] font-black uppercase tracking-[0.3em] opacity-30 px-1">Artista</label>
+                    <input
+                      required
+                      type="text"
+                      placeholder="Nombre del autor..."
+                      className="w-full bg-bone-light border border-charcoal/5 rounded-2xl p-5 focus:bg-white focus:border-charcoal/20 outline-none transition-all placeholder:opacity-30 font-serif"
+                      value={formData.artist}
+                      onChange={(e) => setFormData({ ...formData, artist: e.target.value })}
+                    />
+                  </div>
+                
                 <div className="space-y-3">
                   <label className="text-[9px] font-black uppercase tracking-[0.3em] opacity-30 px-1">Descripción</label>
                   <textarea
@@ -659,6 +671,9 @@ export function AdminPanel({ user }: AdminPanelProps) {
             </div>
             <div className="flex-grow min-w-0 text-center md:text-left">
               <h3 className="font-serif text-3xl mb-1 group-hover:tracking-tight transition-all">{art.name}</h3>
+              {art.artist && (
+              <p className="text-sm font-medium opacity-60 font-serif mb-1">{art.artist}</p>
+              )}
               {art.technique && (
                 <p className="text-[8px] font-black uppercase tracking-widest opacity-40 mb-1">{art.technique}</p>
               )}
