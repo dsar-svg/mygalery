@@ -44,6 +44,7 @@ export const artService = {
       return {
         id: data.id,
         name: data.name,
+        artist: data.artist,
         description: data.description,
         technique: data.technique,
         price: data.price,
