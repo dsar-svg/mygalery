@@ -99,7 +99,11 @@ export function LandingPage({ settings }: LandingPageProps) {
                     <div className="flex justify-between items-baseline">
                       <div className="space-y-1">
                         <h3 className="font-serif text-3xl leading-tight group-hover:italic transition-all">{art.name}</h3>
-                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-30 italic">Anónimo</p>
+                        {art.artist ? (
+                          <p className="text-[10px] font-bold uppercase tracking-widest opacity-30 italic">{art.artist}</p>
+                        ) : (
+                          <p className="text-[10px] font-bold uppercase tracking-widest opacity-30 italic">Anónimo</p>
+                        )}
                       </div>
                       <p className="text-lg font-light tracking-tighter">{formatPrice(art.price, settings?.currency)}</p>
                     </div>
