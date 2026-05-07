@@ -33,6 +33,7 @@ export function AdminPanel({ user }: AdminPanelProps) {
   
   const [formData, setFormData] = useState({
     name: '',
+    artist: '',
     description: '',
     technique: '',
     price: 0,
@@ -110,7 +111,7 @@ export function AdminPanel({ user }: AdminPanelProps) {
         await artService.createArtwork(formData);
         setIsAdding(false);
       }
-      setFormData({ name: '', description: '', technique: '', price: 0, imageUrl: '' });
+      setFormData({ name: '', artist: '', description: '', technique: '', price: '', imageUrl: '' });
     } catch (error: any) {
       console.error("Error saving artwork:", error);
       setSaveError(error?.message || 'Error al guardar la obra. Por favor intenta de nuevo.');
@@ -142,6 +143,7 @@ export function AdminPanel({ user }: AdminPanelProps) {
     setEditingId(art.id);
     setFormData({
       name: art.name,
+      artist: art.artist || '',
       description: art.description || '',
       technique: art.technique || '',
       price: art.price,
@@ -177,7 +179,7 @@ export function AdminPanel({ user }: AdminPanelProps) {
   const cancelEdit = () => {
     setIsAdding(false);
     setEditingId(null);
-    setFormData({ name: '', description: '', technique: '', price: 0, imageUrl: '' });
+    setFormData({ name: '', artist: '', description: '', technique: '', price: 0, imageUrl: '' });
   };
 
   const loadAllowedEmails = async () => {
