@@ -94,7 +94,11 @@ export function ArtworkDetail({ settings }: ArtworkDetailProps) {
             </div>
             <h1 className="font-serif text-7xl md:text-[6rem] leading-[0.9] tracking-tighter">{art.name}</h1>
             <div className="flex flex-col space-y-4 pt-4">
-              <p className="text-xl font-light tracking-[0.4em] uppercase opacity-70 border-l-2 border-charcoal/20 pl-6">Artista Anónimo</p>
+            {art.artist && (
+              <p className="text-xl md:text-2xl font-serif opacity-60 mt-4 italic">
+                por {art.artist}
+              </p>
+            )}
               <p className="text-4xl font-light tracking-tighter opacity-100 italic font-serif">{formatPrice(art.price, settings?.currency)}</p>
             </div>
           </div>
@@ -155,8 +159,11 @@ export function ArtworkDetail({ settings }: ArtworkDetailProps) {
                 referrerPolicy="no-referrer"
               />
               <div className="absolute top-full left-0 w-full pt-8 text-center text-bone-light opacity-60 space-y-2">
-                <p className="font-serif text-3xl italic">{art.name}</p>
-              </div>
+              <p className="font-serif text-3xl italic">{art.name}</p>
+              {art.artist && (
+                <p className="font-serif text-xl opacity-80">{art.artist}</p>
+              )}
+            </div>
             </motion.div>
             <button 
               className="absolute top-10 right-10 text-white opacity-40 hover:opacity-100 transition-opacity"
