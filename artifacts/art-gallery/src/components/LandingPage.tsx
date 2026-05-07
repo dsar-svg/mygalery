@@ -86,11 +86,11 @@ export function LandingPage({ settings }: LandingPageProps) {
                 className="group cursor-pointer"
               >
                 <Link to={`/artwork/${art.id}`}>
-                  <div className="aspect-[3/4] overflow-hidden bg-gallery-gray relative mb-8 shadow-sm transition-shadow group-hover:shadow-xl">
+                  <div className="aspect-[3/4] overflow-hidden bg-gallery-gray flex items-center justify-center relative mb-8 shadow-sm transition-shadow group-hover:shadow-xl p-6">
                     <img 
                       src={art.imageUrl} 
                       alt={art.name}
-                      className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+                      className="max-w-full max-h-full object-contain transition-transform duration-1000 group-hover:scale-105 shadow-md"
                       referrerPolicy="no-referrer"
                     />
                     <div className="absolute inset-0 bg-charcoal/0 group-hover:bg-charcoal/5 transition-colors duration-500"></div>
