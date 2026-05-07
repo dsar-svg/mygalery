@@ -114,6 +114,7 @@ export const artService = {
       .from('artworks')
       .insert({
         name: data.name,
+        artist: data.artist,
         description: data.description,
         technique: data.technique,
         price: data.price,
@@ -141,6 +142,7 @@ export const artService = {
     try {
       const updateData: Record<string, unknown> = {};
       if (data.name !== undefined) updateData.name = data.name;
+      if (data.artist !== undefined) updateData.artist = data.artist;
       if (data.description !== undefined) updateData.description = data.description;
       if (data.technique !== undefined) updateData.technique = data.technique;
       if (data.price !== undefined) updateData.price = data.price;
