@@ -109,16 +109,21 @@ export function ArtworkDetail({ settings }: ArtworkDetailProps) {
             </div>
           )}
 
-          <div className="space-y-8">
-             <div className="flex justify-start items-center border-b border-charcoal/5 pb-4">
-               <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-60 italic">Técnica: {art.technique || 'Técnica Mixta'}</p>
-               {art.dimensions && (
-                   <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-60 italic">
-                     Dimensiones: {art.dimensions}
-                   </p>
-                 )}
-             </div>
-          </div>
+          <div className="flex flex-col gap-2 border-b border-charcoal/5 pb-4">
+              {/* Renderiza la técnica solo una vez */}
+              <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-60 italic">
+                Técnica: {art.technique || 'Técnica Mixta'}
+              </p>
+              
+              {/* Renderiza las dimensiones solo si existen */}
+              {art.dimensions && (
+                <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-60 italic">
+                  Dimensiones: {art.dimensions}
+                </p>
+              )}
+            </div>
+
+          
           
           <div className="pt-12 border-t border-charcoal/5 flex flex-wrap gap-6 items-center">
             <button 
