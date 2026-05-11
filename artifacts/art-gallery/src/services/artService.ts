@@ -48,7 +48,7 @@ export const artService = {
         artist: data.artist,
         description: data.description,
         technique: data.technique,
-        dimensions: item.dimensions || '',
+        dimensions: data.dimensions || '',
         price: data.price,
         imageUrl: data.image_url,
         createdAt: new Date(data.created_at),
