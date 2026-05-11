@@ -171,7 +171,7 @@ export function AdminPanel({ user }: AdminPanelProps) {
   img.onload = () => {
     if (!ctx) return;
 
-    // --- 1. Fondo y Marco Redondeado ---
+    // --- 1. Fondo y Marco ---
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
@@ -179,10 +179,9 @@ export function AdminPanel({ user }: AdminPanelProps) {
     const frameWidth = canvasWidth - framePadding * 2;
     const frameHeight = canvasHeight - framePadding * 2;
     const cornerRadius = 50;
-    const lineWidth = 20;
-
+    
     ctx.strokeStyle = '#1A1A1A';
-    ctx.lineWidth = lineWidth;
+    ctx.lineWidth = 20;
     ctx.lineJoin = 'round';
 
     const drawRoundedRect = (x: number, y: number, w: number, h: number, r: number) => {
@@ -202,73 +201,67 @@ export function AdminPanel({ user }: AdminPanelProps) {
     drawRoundedRect(framePadding, framePadding, frameWidth, frameHeight, cornerRadius);
     ctx.stroke();
 
-    // --- FUNCIÓN AUXILIAR PARA SALTO DE LÍNEA CENTRADO ---
-    const drawWrappedText = (text: string, x: number, y: number, maxWidth: number, lineHeight: number) => {
+    // --- FUNCIÓN DE TEXTO CON SALTO DE LÍNEA ---
+    const getWrappedLines = (text: string, maxWidth: number) => {
       const words = text.split(' ');
       let line = '';
       const lines = [];
-
       for (let n = 0; n < words.length; n++) {
         const testLine = line + words[n] + ' ';
-        const metrics = ctx.measureText(testLine);
-        if (metrics.width > maxWidth && n > 0) {
-          lines.push(line);
+        if (ctx.measureText(testLine).width > maxWidth && n > 0) {
+          lines.push(line.trim());
           line = words[n] + ' ';
         } else {
           line = testLine;
         }
       }
-      lines.push(line);
-
-      // Dibujar cada línea centrada
-      for (let k = 0; k < lines.length; k++) {
-        ctx.fillText(lines[k].trim(), x, y + (k * lineHeight));
-      }
-      return lines.length * lineHeight; // Devuelve la altura total ocupada
+      lines.push(line.trim());
+      return lines;
     };
 
-    // --- 2. Título (Ajuste de fuente y centrado) ---
-    ctx.fillStyle = '#1A1A1A';
+    // --- 2. Título ---
     ctx.textAlign = 'center';
-    let titleFontSize = 80;
-    ctx.font = `bold ${titleFontSize}px serif`;
-    const maxTextWidth = frameWidth - 200;
-
-    while (ctx.measureText(art.name.toUpperCase()).width > maxTextWidth && titleFontSize > 40) {
-      titleFontSize -= 5;
-      ctx.font = `bold ${titleFontSize}px serif`;
+    ctx.fillStyle = '#1A1A1A';
+    let titleSize = 85;
+    ctx.font = `bold ${titleSize}px serif`;
+    while (ctx.measureText(art.name.toUpperCase()).width > frameWidth - 200 && titleSize > 40) {
+      titleSize -= 5;
+      ctx.font = `bold ${titleSize}px serif`;
     }
     ctx.fillText(art.name.toUpperCase(), canvasWidth / 2, 250);
 
-    // --- 3. QR Centrado ---
-    const qrSize = 550;
-    ctx.drawImage(img, (canvasWidth - qrSize) / 2, 450, qrSize, qrSize);
+    // --- 3. QR ---
+    const qrSize = 520;
+    ctx.drawImage(img, (canvasWidth - qrSize) / 2, 420, qrSize, qrSize);
 
-    // --- 4. Técnica con Salto de Línea (Corregido) ---
-    if (art.technique) {
-      ctx.font = '900 28px sans-serif';
-      ctx.fillStyle = 'rgba(26, 26, 26, 0.8)';
-      
-      // Calculamos la posición Y para que quede armónico abajo
-      // Usamos la función de envolver texto
-      drawWrappedText(
-        `TÉCNICA: ${art.technique.toUpperCase()}`, 
-        canvasWidth / 2, 
-        canvasHeight - 320, 
-        maxTextWidth, 
-        40 // Interlineado
-      );
-    }
+    // --- 4. Bloque Inferior Dinámico (Técnica + Galería) ---
+    // Calculamos las líneas de la técnica primero
+    ctx.font = '900 28px sans-serif';
+    const techLines = art.technique ? getWrappedLines(`TÉCNICA: ${art.technique.toUpperCase()}`, frameWidth - 240) : [];
+    const lineHeight = 40;
+    const totalTechHeight = techLines.length * lineHeight;
 
-    // --- 5. Galería (Pie) ---
+    // Posicionamiento inteligente: 
+    // Si hay muchas líneas, subimos el conjunto para que no choque con el marco
+    let startYTech = canvasHeight - 200 - totalTechHeight; 
+    let galleryY = startYTech - 60; // Colocamos la galería SIEMPRE arriba de la técnica por seguridad estética
+
+    // Dibujar Nombre Galería
     ctx.font = 'italic 35px serif';
-    ctx.fillStyle = 'rgba(26, 26, 26, 0.5)';
-    ctx.fillText(settings?.galleryName || "Galleria D'Arte", canvasWidth / 2, canvasHeight - 150);
+    ctx.fillStyle = 'rgba(26, 26, 26, 0.4)';
+    ctx.fillText(settings?.galleryName || "Galleria D'Arte", canvasWidth / 2, galleryY);
 
-    // --- 6. Descarga ---
+    // Dibujar Líneas de Técnica
+    ctx.font = '900 28px sans-serif';
+    ctx.fillStyle = 'rgba(26, 26, 26, 0.8)';
+    techLines.forEach((line, index) => {
+      ctx.fillText(line, canvasWidth / 2, startYTech + (index * lineHeight));
+    });
+
+    // --- 5. Descarga ---
     const pngFile = canvas.toDataURL('image/png');
     const downloadLink = document.createElement('a');
-    downloadLink.download = `Ficha_${art.name.replace(/\s+/g, '_')}.png`;
+    downloadLink.download = `QR_${art.name.replace(/\s+/g, '_')}.png`;
     downloadLink.href = pngFile;
     downloadLink.click();
   };
