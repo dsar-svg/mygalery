@@ -872,27 +872,38 @@ export function AdminPanel({ user }: AdminPanelProps) {
               )}
             </AnimatePresence>
       
-      <div className="hidden print:block fixed inset-0 bg-white z-[9999] p-20 text-center space-y-12">
-          {printingArt && (
-            <div className="flex flex-col items-center justify-center h-full space-y-16">
-              <div className="space-y-4">
-                <h1 className="font-serif text-6xl italic">{settings?.galleryName || "Gallería D'Arte"}</h1>
-                <div className="h-px w-32 bg-charcoal mx-auto opacity-20"></div>
+      <div className="hidden print:block fixed inset-0 bg-white z-[9999] p-20 text-left">
+            {printingArt && (
+              <div className="max-w-4xl mx-auto flex flex-col h-full relative">
+                <div className="space-y-24">
+                  <h1 className="font-serif text-8xl uppercase leading-none">{printingArt.name}</h1>
+                  
+                  <div className="space-y-12">
+                    <p className="font-serif text-3xl italic opacity-50 uppercase tracking-widest">{printingArt.artist}</p>
+                    
+                    <p className="text-xl font-light leading-relaxed opacity-70 max-w-2xl">
+                      {printingArt.description}
+                    </p>
+                  </div>
+        
+                  <div className="pt-20 border-t border-charcoal/10">
+                    <p className="text-xs font-black uppercase tracking-[0.3em] opacity-80">
+                      Técnica: {printingArt.technique}
+                    </p>
+                  </div>
+                </div>
+                
+                {/* QR pequeño en la esquina inferior derecha */}
+                <div className="absolute bottom-0 right-0 p-4 border border-charcoal/5 bg-white">
+                  <QRCodeSVG 
+                    value={`${window.location.origin}/artwork/${printingArt.id}`} 
+                    size={100}
+                    level="H"
+                  />
+                </div>
               </div>
-              
-              <div className="p-8 border-[12px] border-charcoal rounded-[3rem]">
-                <QRCodeSVG 
-                  value={`${window.location.origin}/artwork/${printingArt.id}`} 
-                  size={400}
-                  level="H"
-                />
-              </div>
-
-              <div className="space-y-4 text-charcoal">
-                <h2 className="font-serif text-5xl uppercase tracking-tighter">{printingArt.name}</h2>
-                <p className="font-mono text-sm opacity-30 mt-8">Certificado de Autenticidad Digital #{printingArt.id.slice(0,8).toUpperCase()}</p>
-              </div>
-            </div>
+            )}
+        </div>
           )}
       </div>
     </div>
