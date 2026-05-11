@@ -784,7 +784,7 @@ export function AdminPanel({ user }: AdminPanelProps) {
         ))}
       </div>
 
-     {/* Modal de QR corregido */}
+     {/* MODAL DE QR (VISTA PREVIA) */}
       <AnimatePresence>
         {qrModalOpen && (
           <motion.div
@@ -806,12 +806,10 @@ export function AdminPanel({ user }: AdminPanelProps) {
                   <div className="space-y-4 text-center">
                     <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-60">Ficha Técnica</p>
                     <h2 className="font-serif text-4xl">{art.name}</h2>
-                    {art.artist && (
-                      <p className="font-serif text-xl italic opacity-60">{art.artist}</p>
-                    )}
+                    {art.artist && <p className="font-serif text-xl italic opacity-60">{art.artist}</p>}
                   </div>
 
-                  <div className="p-8 border-[1px] border-charcoal/10 rounded-[2rem] bg-bone-light">
+                  <div className="p-8 border border-charcoal/10 rounded-[2rem] bg-bone-light">
                     <QRCodeSVG
                       id={`qr-code-${art.id}`}
                       value={`${window.location.origin}/artwork/${art.id}`}
@@ -819,15 +817,6 @@ export function AdminPanel({ user }: AdminPanelProps) {
                       level="H"
                       includeMargin={true}
                     />
-                  </div>
-
-                  <div className="text-center space-y-2">
-                    {art.technique && (
-                      <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40 italic">{art.technique}</p>
-                    )}
-                    {art.dimensions && (
-                      <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40">{art.dimensions}</p>
-                    )}
                   </div>
 
                   <div className="flex gap-4 w-full">
@@ -841,7 +830,7 @@ export function AdminPanel({ user }: AdminPanelProps) {
                       onClick={() => {
                         setPrintingArt(art);
                         setQrModalOpen(null);
-                        setTimeout(() => window.print(), 100);
+                        setTimeout(() => window.print(), 200);
                       }}
                       className="flex-1 bg-bone-dark text-charcoal py-4 rounded-full uppercase tracking-[0.2em] text-[10px] font-bold shadow-xl flex items-center justify-center gap-2"
                     >
@@ -850,56 +839,76 @@ export function AdminPanel({ user }: AdminPanelProps) {
                   </div>
                 </div>
               ))}
-              <button
-                onClick={() => setQrModalOpen(null)}
-                className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white border border-charcoal/5 flex items-center justify-center hover:bg-charcoal hover:text-white transition-all"
-              >
-                <X className="w-5 h-5" />
-              </button>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* 2. Vista de Impresión (Organizado como ArtworkDetail + QR Esquina) */}
-      <div className="hidden print:block fixed inset-0 bg-white z-[9999] p-20 text-left">
+      {/* BLOQUE DE IMPRESIÓN (FUERA DE TODO BUCLE) */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          body * { visibility: hidden; }
+          .print-section, .print-section * { visibility: visible; }
+          .print-section { 
+            position: absolute; 
+            left: 0; 
+            top: 0; 
+            width: 100%; 
+            height: 100vh; 
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+          }
+          @page { size: portrait; margin: 0; }
+        }
+      `}} />
+
+      <div className="hidden print:block print-section bg-white">
         {printingArt && (
-          <div className="max-w-4xl mx-auto flex flex-col h-full relative border-l border-charcoal/10 pl-16">
-            <div className="space-y-20">
-              <h1 className="font-serif text-8xl uppercase leading-none tracking-tighter">{printingArt.name}</h1>
+          <div className="h-full w-full p-12 flex items-center justify-center">
+            {/* MARCO EXTERIOR */}
+            <div className="border-[1px] border-charcoal/20 w-full h-full p-16 relative flex flex-col justify-between">
               
-              <div className="space-y-10">
-                <p className="font-serif text-3xl italic opacity-50 uppercase tracking-widest">{printingArt.artist}</p>
+              <div className="space-y-16">
+                <h1 className="font-serif text-7xl uppercase leading-none tracking-tighter border-b border-charcoal/5 pb-8">
+                  {printingArt.name}
+                </h1>
                 
-                {/* Aquí añadimos la descripción que faltaba */}
-                <p className="text-xl font-light leading-relaxed opacity-70 max-w-2xl">
-                  {printingArt.description}
-                </p>
+                <div className="space-y-8">
+                  <p className="font-serif text-3xl italic opacity-60 uppercase tracking-widest">
+                    {printingArt.artist}
+                  </p>
+                  <p className="text-xl font-light leading-relaxed opacity-80 max-w-2xl italic">
+                    {printingArt.description}
+                  </p>
+                </div>
+
+                <div className="pt-8">
+                  <p className="text-[10px] font-black uppercase tracking-[0.5em] opacity-90">
+                    TÉCNICA: {printingArt.technique || 'Técnica Mixta'}
+                  </p>
+                  {printingArt.dimensions && (
+                    <p className="text-[10px] font-black uppercase tracking-[0.5em] opacity-40 mt-2">
+                      DIMENSIONES: {printingArt.dimensions}
+                    </p>
+                  )}
+                </div>
               </div>
 
-              <div className="pt-16 border-t border-charcoal/10">
-                <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-80">
-                  TÉCNICA: {printingArt.technique || 'Sin especificar'}
-                </p>
-                {printingArt.dimensions && (
-                   <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40 mt-2">
-                    DIMENSIONES: {printingArt.dimensions}
-                  </p>
-                )}
+              {/* QR en la esquina inferior derecha del marco */}
+              <div className="absolute bottom-12 right-12 flex flex-col items-end space-y-2">
+                <QRCodeSVG 
+                  value={`${window.location.origin}/artwork/${printingArt.id}`} 
+                  size={110} 
+                  level="H" 
+                />
+                <p className="text-[8px] font-mono opacity-20 uppercase">Digital Certificate</p>
               </div>
-            </div>
-            
-            {/* QR pequeño abajo a la derecha */}
-            <div className="absolute bottom-0 right-0 p-4 bg-white">
-              <QRCodeSVG 
-                value={`${window.location.origin}/artwork/${printingArt.id}`} 
-                size={120} 
-                level="H" 
-              />
+
             </div>
           </div>
         )}
       </div>
-    </div>
+    </div> // Cierre del contenedor principal
   );
 }
