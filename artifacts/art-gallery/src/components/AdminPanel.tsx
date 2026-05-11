@@ -163,20 +163,68 @@ export function AdminPanel({ user }: AdminPanelProps) {
     const ctx = canvas.getContext('2d');
     const img = new Image();
 
+    canvas.width = 600;
+    canvas.height = 850;
+
     img.onload = () => {
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx?.drawImage(img, 0, 0);
-      const pngFile = canvas.toDataURL('image/png');
+    if (!ctx) return;
 
-      const downloadLink = document.createElement('a');
-      downloadLink.download = `qr-${art.name.replace(/[^a-z0-9]/gi, '_')}.png`;
-      downloadLink.href = pngFile;
-      downloadLink.click();
-    };
+    // 1. Fondo
+    ctx.fillStyle = '#F5F5F0'; // Color 'bone-light'
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+    // 2. Borde elegante (Charcoal)
+    ctx.strokeStyle = '#1A1A1A';
+    ctx.lineWidth = 10;
+    ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+
+    // 3. Texto: Título de la Obra
+    ctx.fillStyle = '#1A1A1A';
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 40px serif';
+    ctx.fillText(art.name.toUpperCase(), canvas.width / 2, 100);
+
+    // 4. Texto: Artista
+    if (art.artist) {
+      ctx.font = 'italic 28px serif';
+      ctx.fillStyle = 'rgba(26, 26, 26, 0.7)';
+      ctx.fillText(art.artist, canvas.width / 2, 145);
+    }
+
+    // 5. Dibujar el QR centrado
+    // Calculamos posición para que el QR quede en medio
+    const qrSize = 350;
+    const qrX = (canvas.width - qrSize) / 2;
+    const qrY = 220;
+    ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
+
+    // 6. Texto: Técnica y Detalles (Estilo ArtworkDetail)
+    ctx.font = '900 14px sans-serif';
+    ctx.fillStyle = 'rgba(26, 26, 26, 0.5)';
+    const infoY = 650;
+    
+    if (art.technique) {
+      ctx.fillText(`TÉCNICA: ${art.technique.toUpperCase()}`, canvas.width / 2, infoY);
+    }
+    
+    if (art.dimensions) {
+      ctx.fillText(`DIMENSIONES: ${art.dimensions}`, canvas.width / 2, infoY + 30);
+    }
+
+    // 7. Pie de página / Nombre de la Galería
+    ctx.font = 'italic 20px serif';
+    ctx.fillText(settings?.galleryName || "Gallería Privada", canvas.width / 2, 780);
+
+    // Descarga
+    const pngFile = canvas.toDataURL('image/png');
+    const downloadLink = document.createElement('a');
+    downloadLink.download = `Certificado_${art.name.replace(/\s+/g, '_')}.png`;
+    downloadLink.href = pngFile;
+    downloadLink.click();
   };
+
+  img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+};
 
   const cancelEdit = () => {
     setIsAdding(false);
@@ -739,23 +787,38 @@ export function AdminPanel({ user }: AdminPanelProps) {
                 return (
                   <div className="flex flex-col items-center space-y-8">
                     <div className="space-y-4 text-center">
-                      <h2 className="font-serif text-3xl">{art.name}</h2>
-                      {art.technique && (
-                        <p className="text-[8px] font-black uppercase tracking-widest opacity-40">{art.technique}</p>
+                      <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-60">Ficha Técnica</p>
+                      <h2 className="font-serif text-4xl">{art.name}</h2>
+                      {art.artist && (
+                        <p className="font-serif text-xl italic opacity-60">{art.artist}</p>
                       )}
                     </div>
 
-                    <div className="p-6 border-2 border-charcoal rounded-[2rem] bg-bone-light">
+                    <div className="p-8 border-[1px] border-charcoal/10 rounded-[2rem] bg-bone-light shadow-inner">
                       <QRCodeSVG
                         id={`qr-code-${art.id}`}
                         value={`${window.location.origin}/artwork/${art.id}`}
-                        size={280}
+                        size={240}
                         level="H"
                         includeMargin={true}
                       />
                     </div>
 
-                    <div className="flex gap-4 w-full">
+                    <div className="text-center space-y-2">
+                        {art.technique && (
+                          <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40 italic">
+                            {art.technique}
+                          </p>
+                        )}
+                        {art.dimensions && (
+                          <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40">
+                            {art.dimensions}
+                          </p>
+                        )}
+                        <p className="text-lg font-serif opacity-80 pt-4">
+                          {formatPrice(art.price, settings?.currency)}
+                        </p>
+                      </div>
                       <button
                         onClick={() => handleDownloadQR(art)}
                         className="flex-1 bg-charcoal text-bone-light py-4 rounded-full uppercase tracking-[0.2em] text-[10px] font-bold hover:scale-105 transition-all shadow-xl flex items-center justify-center gap-2"
