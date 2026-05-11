@@ -166,45 +166,53 @@ export function AdminPanel({ user }: AdminPanelProps) {
     canvas.width = 1200;
     canvas.height = 1600;
 
-   img.onload = () => {
+   const handleDownloadQR = (art: Artwork) => {
+  const svgElement = document.getElementById(`qr-code-${art.id}`);
+  if (!svgElement) return;
+
+  const svgData = new XMLSerializer().serializeToString(svgElement);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const img = new Image();
+
+  canvas.width = 1200;
+  canvas.height = 1600;
+
+  img.onload = () => {
     if (!ctx) return;
 
-    // Fondo y Marco Grueso
+    // Fondo y Marco Muy Grueso
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.strokeStyle = '#1A1A1A';
-    ctx.lineWidth = 40; 
-    ctx.strokeRect(60, 60, canvas.width - 120, canvas.height - 120);
+    ctx.lineWidth = 60; // Marco imponente
+    ctx.strokeRect(80, 80, canvas.width - 160, canvas.height - 160);
 
-    // Texto Galería
+    // Texto Galería (Arriba)
     ctx.fillStyle = '#1A1A1A';
     ctx.textAlign = 'center';
-    ctx.font = 'italic 60px serif';
-    ctx.fillText(settings?.galleryName || "Galería d'Arte", canvas.width / 2, 200);
+    ctx.font = 'italic 70px serif';
+    ctx.fillText(settings?.galleryName || "Galería d'Arte", canvas.width / 2, 280);
 
-    // Línea decorativa
-    ctx.lineWidth = 2;
+    // Línea decorativa fina
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(canvas.width / 2 - 80, 240);
-    ctx.lineTo(canvas.width / 2 + 80, 240);
+    ctx.moveTo(canvas.width / 2 - 60, 330);
+    ctx.lineTo(canvas.width / 2 + 60, 330);
     ctx.stroke();
 
-    // Dibujar QR Grande y Centrado
-    const qrSize = 600;
-    ctx.drawImage(img, (canvas.width - qrSize) / 2, 400, qrSize, qrSize);
+    // QR Grande y Centrado
+    const qrSize = 550;
+    ctx.drawImage(img, (canvas.width - qrSize) / 2, 480, qrSize, qrSize);
 
-    // Nombre de la Obra
-    ctx.font = 'bold 70px serif';
-    ctx.fillText(art.name.toUpperCase(), canvas.width / 2, 1150);
+    // Nombre de la Obra (Abajo)
+    ctx.font = 'bold 85px serif';
+    ctx.fillText(art.name.toUpperCase(), canvas.width / 2, 1300);
 
-    // Texto Certificado
-    ctx.font = '24px monospace';
-    ctx.fillStyle = 'rgba(26, 26, 26, 0.4)';
-    ctx.fillText(` #${art.id.slice(0,8).toUpperCase()}`, canvas.width / 2, 1300);
-
+    // Ejecutar descarga
     const pngFile = canvas.toDataURL('image/png');
     const downloadLink = document.createElement('a');
-    downloadLink.download = `Certificado_${art.name}.png`;
+    downloadLink.download = `Ficha_${art.name}.png`;
     downloadLink.href = pngFile;
     downloadLink.click();
   };
@@ -768,28 +776,25 @@ export function AdminPanel({ user }: AdminPanelProps) {
               onClick={(e) => e.stopPropagation()}
             >
               {artworks.filter(a => a.id === qrModalOpen).map((art) => (
-                <div key={art.id} className="flex flex-col items-center space-y-8 text-center">
-                  <div className="space-y-2">
-                    <h1 className="font-serif text-3xl italic opacity-40">{settings?.galleryName || "Galería d'Arte"}</h1>
-                    <div className="h-px w-16 bg-charcoal mx-auto opacity-10"></div>
+                <div key={art.id} className="flex flex-col items-center space-y-10 text-center">
+                  <div className="space-y-4">
+                    <h1 className="font-serif text-4xl italic opacity-50">{settings?.galleryName || "Galería d'Arte"}</h1>
+                    <div className="h-px w-12 bg-charcoal mx-auto opacity-20"></div>
                   </div>
 
-                  <div className="p-6 border-[12px] border-charcoal rounded-[2.5rem]">
+                  <div className="p-6 border-[16px] border-charcoal rounded-[3rem]">
                     <QRCodeSVG
                       id={`qr-code-${art.id}`}
                       value={`${window.location.origin}/artwork/${art.id}`}
-                      size={280}
+                      size={260}
                       level="H"
                       includeMargin={true}
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <h2 className="font-serif text-4xl uppercase tracking-tighter">{art.name}</h2>
-                    <p className="font-mono text-[10px] opacity-20 uppercase tracking-widest">Digital Certificate ID: {art.id.slice(0,8)}</p>
-                  </div>
+                  <h2 className="font-serif text-5xl uppercase tracking-tighter pt-4">{art.name}</h2>
 
-                  <div className="flex gap-4 w-full pt-4">
+                  <div className="flex gap-4 w-full pt-6">
                     <button onClick={() => handleDownloadQR(art)} className="flex-1 bg-charcoal text-white py-4 rounded-full uppercase tracking-widest text-[10px] font-bold shadow-lg flex items-center justify-center gap-2">
                       <Save className="w-4 h-4" /> Descargar
                     </button>
@@ -799,13 +804,13 @@ export function AdminPanel({ user }: AdminPanelProps) {
                   </div>
                 </div>
               ))}
-              <button onClick={() => setQrModalOpen(null)} className="absolute top-6 right-6 opacity-20 hover:opacity-100 transition-opacity"><X /></button>
+              <button onClick={() => setQrModalOpen(null)} className="absolute top-8 right-8 opacity-20 hover:opacity-100 transition-opacity"><X /></button>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* CSS DE IMPRESIÓN FORZADO A 1 PÁGINA */}
+      {/* ESTILO DE IMPRESIÓN - CORRECCIÓN DE PÁGINAS EXTRA */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           @page { size: portrait; margin: 0; }
@@ -823,25 +828,24 @@ export function AdminPanel({ user }: AdminPanelProps) {
         }
       `}} />
 
-      {/* AREA DE IMPRESIÓN DISEÑO SOLICITADO */}
+      {/* ÁREA DE IMPRESIÓN - DISEÑO LIMPIO */}
       <div className="hidden print:block print-area">
         {printingArt && (
-          <div className="w-[85vw] h-[90vh] border-[16px] border-charcoal rounded-[4rem] flex flex-col items-center justify-center space-y-20 p-20 bg-white">
-            <div className="text-center space-y-6">
-              <h1 className="font-serif text-6xl italic">{settings?.galleryName || "Galería d'Arte"}</h1>
-              <div className="h-px w-32 bg-charcoal mx-auto opacity-20"></div>
+          <div className="w-[85vw] h-[90vh] border-[24px] border-charcoal rounded-[5rem] flex flex-col items-center justify-around p-24 bg-white">
+            <div className="text-center space-y-8">
+              <h1 className="font-serif text-7xl italic opacity-60">{settings?.galleryName || "Galería d'Arte"}</h1>
+              <div className="h-px w-24 bg-charcoal mx-auto opacity-20"></div>
             </div>
 
             <QRCodeSVG 
               value={`${window.location.origin}/artwork/${printingArt.id}`} 
-              size={450}
+              size={500}
               level="H"
             />
 
-            <div className="text-center space-y-6">
-              <h2 className="font-serif text-7xl uppercase tracking-tighter">{printingArt.name}</h2>
-              <p className="font-mono text-sm opacity-30 tracking-widest" #{printingArt.id.slice(0,8).toUpperCase()}</p>
-            </div>
+            <h2 className="font-serif text-8xl uppercase tracking-tighter text-center">
+              {printingArt.name}
+            </h2>
           </div>
         )}
       </div>
