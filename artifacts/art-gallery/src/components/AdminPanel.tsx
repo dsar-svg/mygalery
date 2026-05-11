@@ -166,7 +166,7 @@ export function AdminPanel({ user }: AdminPanelProps) {
     canvas.width = 1200;
     canvas.height = 1600;
 
-    img.onload = () => {
+   img.onload = () => {
     if (!ctx) return;
 
     // Fondo y Marco Grueso
@@ -197,7 +197,10 @@ export function AdminPanel({ user }: AdminPanelProps) {
     ctx.font = 'bold 70px serif';
     ctx.fillText(art.name.toUpperCase(), canvas.width / 2, 1150);
 
-    
+    // Texto Certificado
+    ctx.font = '24px monospace';
+    ctx.fillStyle = 'rgba(26, 26, 26, 0.4)';
+    ctx.fillText(` #${art.id.slice(0,8).toUpperCase()}`, canvas.width / 2, 1300);
 
     const pngFile = canvas.toDataURL('image/png');
     const downloadLink = document.createElement('a');
@@ -208,7 +211,6 @@ export function AdminPanel({ user }: AdminPanelProps) {
 
   img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
 };
-
   const cancelEdit = () => {
     setIsAdding(false);
     setEditingId(null);
@@ -836,7 +838,10 @@ export function AdminPanel({ user }: AdminPanelProps) {
               level="H"
             />
 
-            
+            <div className="text-center space-y-6">
+              <h2 className="font-serif text-7xl uppercase tracking-tighter">{printingArt.name}</h2>
+              <p className="font-mono text-sm opacity-30 tracking-widest" #{printingArt.id.slice(0,8).toUpperCase()}</p>
+            </div>
           </div>
         )}
       </div>
