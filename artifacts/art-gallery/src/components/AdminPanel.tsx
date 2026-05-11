@@ -823,69 +823,61 @@ export function AdminPanel({ user }: AdminPanelProps) {
                   </div>
                 </div>
               ))}
+              <button
+                onClick={() => setQrModalOpen(null)}
+                className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white border border-charcoal/5 flex items-center justify-center hover:bg-charcoal hover:text-white transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* BLOQUE DE IMPRESIÓN (FUERA DE TODO BUCLE) */}
-      {/* BLOQUE DE IMPRESIÓN CORREGIDO */}
+      {/* ESTILO PARA EVITAR MULTIPLES HOJAS AL IMPRIMIR */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           body * { visibility: hidden; }
-          .print-section, .print-section * { visibility: visible; }
-          .print-section { 
+          .print-container, .print-container * { visibility: visible; }
+          .print-container { 
             position: fixed; 
             left: 0; top: 0; 
             width: 100vw; height: 100vh; 
-            background: white !important;
             margin: 0; padding: 0;
+            background: white !important;
           }
           @page { size: portrait; margin: 0; }
         }
       `}} />
 
-      <div className="hidden print:block print-section">
+      {/* BLOQUE DE IMPRESIÓN (CON MARCO GRUESO) */}
+      <div className="hidden print:block print-container">
         {printingArt && (
-          <div className="h-screen w-screen p-8 box-border bg-white">
-            {/* MARCO GRUESO: border-[6px] para que sea bien visible */}
-            <div className="border-[6px] border-charcoal w-full h-full p-16 relative flex flex-col justify-between box-border">
-              
-              <div className="space-y-12">
-                <h1 className="font-serif text-7xl uppercase leading-none tracking-tighter border-b-[1px] border-charcoal/10 pb-8">
+          <div className="h-screen w-screen p-10 box-border">
+            {/* MARCO GRUESO (border-[12px]) */}
+            <div className="border-[12px] border-charcoal w-full h-full p-16 relative flex flex-col justify-between box-border">
+              <div className="space-y-12 text-left">
+                <h1 className="font-serif text-7xl uppercase leading-none tracking-tighter border-b border-charcoal/10 pb-8">
                   {printingArt.name}
                 </h1>
-                
-                <div className="space-y-6">
-                  <p className="font-serif text-3xl italic opacity-60 uppercase tracking-widest">
-                    {printingArt.artist}
-                  </p>
-                  <p className="text-xl font-light leading-relaxed opacity-80 max-w-2xl">
-                    {printingArt.description}
-                  </p>
+                <div className="space-y-8">
+                  <p className="font-serif text-3xl italic opacity-60 uppercase tracking-widest">{printingArt.artist}</p>
+                  <p className="text-xl font-light leading-relaxed opacity-80 max-w-2xl">{printingArt.description}</p>
                 </div>
-
-                <div className="pt-10">
-                  <p className="text-[10px] font-black uppercase tracking-[0.5em] opacity-90">
-                    TÉCNICA: {printingArt.technique || 'Técnica Mixta'}
-                  </p>
+                <div className="pt-8">
+                  <p className="text-[10px] font-black uppercase tracking-[0.5em] opacity-90">TÉCNICA: {printingArt.technique || 'MIXTA'}</p>
                   {printingArt.dimensions && (
-                    <p className="text-[10px] font-black uppercase tracking-[0.5em] opacity-40 mt-2">
-                      DIMENSIONES: {printingArt.dimensions}
-                    </p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.5em] opacity-40 mt-2">DIMENSIONES: {printingArt.dimensions}</p>
                   )}
                 </div>
               </div>
-
-              {/* QR en la esquina inferior derecha del marco */}
               <div className="absolute bottom-12 right-12">
-                <QRCodeSVG 
-                  value={`${window.location.origin}/artwork/${printingArt.id}`} 
-                  size={120} 
-                  level="H" 
-                />
+                <QRCodeSVG value={`${window.location.origin}/artwork/${printingArt.id}`} size={140} level="H" />
               </div>
             </div>
           </div>
         )}
       </div>
+    </div>
+  );
+}
