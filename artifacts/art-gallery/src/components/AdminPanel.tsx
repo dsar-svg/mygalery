@@ -155,18 +155,6 @@ export function AdminPanel({ user }: AdminPanelProps) {
   };
 
   const handleDownloadQR = (art: Artwork) => {
-    const svgElement = document.getElementById(`qr-code-${art.id}`);
-    if (!svgElement) return;
-
-    const svgData = new XMLSerializer().serializeToString(svgElement);
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
-
-    canvas.width = 1200;
-    canvas.height = 1600;
-
-   const handleDownloadQR = (art: Artwork) => {
   const svgElement = document.getElementById(`qr-code-${art.id}`);
   if (!svgElement) return;
 
@@ -181,11 +169,13 @@ export function AdminPanel({ user }: AdminPanelProps) {
   img.onload = () => {
     if (!ctx) return;
 
-    // Fondo y Marco Muy Grueso
+    // Fondo Blanco
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Marco Muy Grueso
     ctx.strokeStyle = '#1A1A1A';
-    ctx.lineWidth = 60; // Marco imponente
+    ctx.lineWidth = 60; 
     ctx.strokeRect(80, 80, canvas.width - 160, canvas.height - 160);
 
     // Texto Galería (Arriba)
@@ -194,7 +184,7 @@ export function AdminPanel({ user }: AdminPanelProps) {
     ctx.font = 'italic 70px serif';
     ctx.fillText(settings?.galleryName || "Galería d'Arte", canvas.width / 2, 280);
 
-    // Línea decorativa fina
+    // Línea decorativa
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(canvas.width / 2 - 60, 330);
@@ -209,10 +199,9 @@ export function AdminPanel({ user }: AdminPanelProps) {
     ctx.font = 'bold 85px serif';
     ctx.fillText(art.name.toUpperCase(), canvas.width / 2, 1300);
 
-    // Ejecutar descarga
     const pngFile = canvas.toDataURL('image/png');
     const downloadLink = document.createElement('a');
-    downloadLink.download = `Ficha_${art.name}.png`;
+    downloadLink.download = `QR_${art.name}.png`;
     downloadLink.href = pngFile;
     downloadLink.click();
   };
@@ -758,8 +747,7 @@ export function AdminPanel({ user }: AdminPanelProps) {
         ))}
       </div>
 
-    {/* MODAL DE QR */}
-      <AnimatePresence>
+    <AnimatePresence>
         {qrModalOpen && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -795,10 +783,10 @@ export function AdminPanel({ user }: AdminPanelProps) {
                   <h2 className="font-serif text-5xl uppercase tracking-tighter pt-4">{art.name}</h2>
 
                   <div className="flex gap-4 w-full pt-6">
-                    <button onClick={() => handleDownloadQR(art)} className="flex-1 bg-charcoal text-white py-4 rounded-full uppercase tracking-widest text-[10px] font-bold shadow-lg flex items-center justify-center gap-2">
+                    <button onClick={() => handleDownloadQR(art)} className="flex-1 bg-charcoal text-white py-4 rounded-full uppercase tracking-widest text-[10px] font-bold shadow-lg flex items-center justify-center gap-2 transition-transform hover:scale-105">
                       <Save className="w-4 h-4" /> Descargar
                     </button>
-                    <button onClick={() => { setPrintingArt(art); setQrModalOpen(null); setTimeout(() => window.print(), 300); }} className="flex-1 bg-bone-dark text-charcoal py-4 rounded-full uppercase tracking-widest text-[10px] font-bold shadow-lg flex items-center justify-center gap-2">
+                    <button onClick={() => { setPrintingArt(art); setQrModalOpen(null); setTimeout(() => window.print(), 300); }} className="flex-1 bg-bone-dark text-charcoal py-4 rounded-full uppercase tracking-widest text-[10px] font-bold shadow-lg flex items-center justify-center gap-2 transition-transform hover:scale-105">
                       <Printer className="w-4 h-4" /> Imprimir
                     </button>
                   </div>
@@ -810,7 +798,6 @@ export function AdminPanel({ user }: AdminPanelProps) {
         )}
       </AnimatePresence>
 
-      {/* ESTILO DE IMPRESIÓN - CORRECCIÓN DE PÁGINAS EXTRA */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           @page { size: portrait; margin: 0; }
@@ -824,11 +811,11 @@ export function AdminPanel({ user }: AdminPanelProps) {
             display: flex !important;
             align-items: center;
             justify-content: center;
+            z-index: 9999;
           }
         }
       `}} />
 
-      {/* ÁREA DE IMPRESIÓN - DISEÑO LIMPIO */}
       <div className="hidden print:block print-area">
         {printingArt && (
           <div className="w-[85vw] h-[90vh] border-[24px] border-charcoal rounded-[5rem] flex flex-col items-center justify-around p-24 bg-white">
