@@ -804,14 +804,14 @@ export function AdminPanel({ user }: AdminPanelProps) {
               {artworks.filter(a => a.id === qrModalOpen).map((art) => (
                 <div key={art.id} className="flex flex-col items-center space-y-8">
                   <div className="space-y-4 text-center">
-                    <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-60 px-1">Ficha Técnica</p>
+                    <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-60">Ficha Técnica</p>
                     <h2 className="font-serif text-4xl">{art.name}</h2>
                     {art.artist && (
                       <p className="font-serif text-xl italic opacity-60">{art.artist}</p>
                     )}
                   </div>
 
-                  <div className="p-8 border-[1px] border-charcoal/10 rounded-[2rem] bg-bone-light shadow-inner">
+                  <div className="p-8 border-[1px] border-charcoal/10 rounded-[2rem] bg-bone-light">
                     <QRCodeSVG
                       id={`qr-code-${art.id}`}
                       value={`${window.location.origin}/artwork/${art.id}`}
@@ -823,24 +823,19 @@ export function AdminPanel({ user }: AdminPanelProps) {
 
                   <div className="text-center space-y-2">
                     {art.technique && (
-                      <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40 italic">
-                        {art.technique}
-                      </p>
+                      <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40 italic">{art.technique}</p>
                     )}
                     {art.dimensions && (
-                      <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40">
-                        {art.dimensions}
-                      </p>
+                      <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40">{art.dimensions}</p>
                     )}
                   </div>
 
                   <div className="flex gap-4 w-full">
                     <button
                       onClick={() => handleDownloadQR(art)}
-                      className="flex-1 bg-charcoal text-white py-4 rounded-full uppercase tracking-[0.2em] text-[10px] font-bold hover:scale-105 transition-all shadow-xl flex items-center justify-center gap-2"
+                      className="flex-1 bg-charcoal text-white py-4 rounded-full uppercase tracking-[0.2em] text-[10px] font-bold shadow-xl flex items-center justify-center gap-2"
                     >
-                      <Save className="w-4 h-4" />
-                      Descargar
+                      <Save className="w-4 h-4" /> Descargar
                     </button>
                     <button
                       onClick={() => {
@@ -848,42 +843,53 @@ export function AdminPanel({ user }: AdminPanelProps) {
                         setQrModalOpen(null);
                         setTimeout(() => window.print(), 100);
                       }}
-                      className="flex-1 bg-bone-dark text-charcoal py-4 rounded-full uppercase tracking-[0.2em] text-[10px] font-bold hover:scale-105 transition-all shadow-xl flex items-center justify-center gap-2"
+                      className="flex-1 bg-bone-dark text-charcoal py-4 rounded-full uppercase tracking-[0.2em] text-[10px] font-bold shadow-xl flex items-center justify-center gap-2"
                     >
-                      <Printer className="w-4 h-4" />
-                      Imprimir
+                      <Printer className="w-4 h-4" /> Imprimir
                     </button>
                   </div>
-
-                  <button
-                    onClick={() => setQrModalOpen(null)}
-                    className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white border border-charcoal/5 flex items-center justify-center hover:bg-charcoal hover:text-white transition-all"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
                 </div>
               ))}
+              <button
+                onClick={() => setQrModalOpen(null)}
+                className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white border border-charcoal/5 flex items-center justify-center hover:bg-charcoal hover:text-white transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Vista de Impresión Estilo Galería Minimalista */}
+      {/* 2. Vista de Impresión (Organizado como ArtworkDetail + QR Esquina) */}
       <div className="hidden print:block fixed inset-0 bg-white z-[9999] p-20 text-left">
         {printingArt && (
-          <div className="max-w-4xl mx-auto flex flex-col h-full relative border-l border-charcoal/5 pl-16">
+          <div className="max-w-4xl mx-auto flex flex-col h-full relative border-l border-charcoal/10 pl-16">
             <div className="space-y-20">
               <h1 className="font-serif text-8xl uppercase leading-none tracking-tighter">{printingArt.name}</h1>
+              
               <div className="space-y-10">
                 <p className="font-serif text-3xl italic opacity-50 uppercase tracking-widest">{printingArt.artist}</p>
-                <p className="text-xl font-light leading-relaxed opacity-70 max-w-2xl">{printingArt.description}</p>
-              </div>
-              <div className="pt-16 border-t border-charcoal/10">
-                <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-80">
-                  TÉCNICA: {printingArt.technique || 'Técnica Mixta'}
+                
+                {/* Aquí añadimos la descripción que faltaba */}
+                <p className="text-xl font-light leading-relaxed opacity-70 max-w-2xl">
+                  {printingArt.description}
                 </p>
               </div>
+
+              <div className="pt-16 border-t border-charcoal/10">
+                <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-80">
+                  TÉCNICA: {printingArt.technique || 'Sin especificar'}
+                </p>
+                {printingArt.dimensions && (
+                   <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-40 mt-2">
+                    DIMENSIONES: {printingArt.dimensions}
+                  </p>
+                )}
+              </div>
             </div>
+            
+            {/* QR pequeño abajo a la derecha */}
             <div className="absolute bottom-0 right-0 p-4 bg-white">
               <QRCodeSVG 
                 value={`${window.location.origin}/artwork/${printingArt.id}`} 
