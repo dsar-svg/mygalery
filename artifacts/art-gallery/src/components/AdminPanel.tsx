@@ -167,103 +167,112 @@ export function AdminPanel({ user }: AdminPanelProps) {
   const canvasHeight = 1600;
   canvas.width = canvasWidth;
   canvas.height = canvasHeight;
-    
+
   img.onload = () => {
     if (!ctx) return;
 
-    // --- 1. Fondo Blanco ---
+    // --- 1. Fondo y Marco Redondeado ---
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-    // --- 2. Dibujar el Marco con Esquinas Redondeadas ---
-    const framePadding = 60; // Espaciado desde el borde del canvas
+    const framePadding = 60;
     const frameWidth = canvasWidth - framePadding * 2;
     const frameHeight = canvasHeight - framePadding * 2;
-    const cornerRadius = 50; // Radio de redondeo (equivalente a rounded-[3rem])
-    const lineWidth = 20; // Grosor del marco
+    const cornerRadius = 50;
+    const lineWidth = 20;
 
-    ctx.strokeStyle = '#1A1A1A'; // Color charcoal
+    ctx.strokeStyle = '#1A1A1A';
     ctx.lineWidth = lineWidth;
-    ctx.lineJoin = 'round'; // Suaviza las uniones
+    ctx.lineJoin = 'round';
 
-    // Función auxiliar para dibujar un rectángulo con esquinas redondeadas
-    const drawRoundedRect = (
-      x: number,
-      y: number,
-      width: number,
-      height: number,
-      radius: number
-    ) => {
+    const drawRoundedRect = (x: number, y: number, w: number, h: number, r: number) => {
       ctx.beginPath();
-      ctx.moveTo(x + radius, y);
-      ctx.lineTo(x + width - radius, y);
-      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-      ctx.lineTo(x + width, y + height - radius);
-      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-      ctx.lineTo(x + radius, y + height);
-      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-      ctx.lineTo(x, y + radius);
-      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
       ctx.closePath();
     };
 
-    // Dibujamos el trazo del marco redondeado
     drawRoundedRect(framePadding, framePadding, frameWidth, frameHeight, cornerRadius);
     ctx.stroke();
 
-    // --- 3. Titulo de la Obra (Con ajuste automático de tamaño) ---
+    // --- FUNCIÓN AUXILIAR PARA SALTO DE LÍNEA CENTRADO ---
+    const drawWrappedText = (text: string, x: number, y: number, maxWidth: number, lineHeight: number) => {
+      const words = text.split(' ');
+      let line = '';
+      const lines = [];
+
+      for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > maxWidth && n > 0) {
+          lines.push(line);
+          line = words[n] + ' ';
+        } else {
+          line = testLine;
+        }
+      }
+      lines.push(line);
+
+      // Dibujar cada línea centrada
+      for (let k = 0; k < lines.length; k++) {
+        ctx.fillText(lines[k].trim(), x, y + (k * lineHeight));
+      }
+      return lines.length * lineHeight; // Devuelve la altura total ocupada
+    };
+
+    // --- 2. Título (Ajuste de fuente y centrado) ---
     ctx.fillStyle = '#1A1A1A';
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-
-    const maxTitleWidth = frameWidth - 200; // Margen interno para el texto
-    let titleFontSize = 80; // Tamaño de fuente base ( Serif, Negrita)
+    let titleFontSize = 80;
     ctx.font = `bold ${titleFontSize}px serif`;
+    const maxTextWidth = frameWidth - 200;
 
-    // Bucle para reducir el tamaño de la fuente si el texto es demasiado ancho
-    while (ctx.measureText(art.name.toUpperCase()).width > maxTitleWidth && titleFontSize > 30) {
+    while (ctx.measureText(art.name.toUpperCase()).width > maxTextWidth && titleFontSize > 40) {
       titleFontSize -= 5;
       ctx.font = `bold ${titleFontSize}px serif`;
     }
-
-    // Dibujamos el título centrado en la parte superior
     ctx.fillText(art.name.toUpperCase(), canvasWidth / 2, 250);
 
-    // --- 4. Nombre del Artista ---
-    if (art.artist) {
-      ctx.font = 'italic 40px serif';
-      ctx.fillStyle = 'rgba(26, 26, 26, 0.6)'; // Charcoal con opacidad
-      ctx.fillText(art.artist.toUpperCase(), canvasWidth / 2, 330);
-    }
+    // --- 3. QR Centrado ---
+    const qrSize = 550;
+    ctx.drawImage(img, (canvasWidth - qrSize) / 2, 450, qrSize, qrSize);
 
-    // --- 5. Dibujar el Código QR Centrado ---
-    const qrSize = 500; // Tamaño del QR en el canvas
-    const qrX = (canvasWidth - qrSize) / 2;
-    const qrY = (canvasHeight - qrSize) / 2; // Centrado verticalmente
-    ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
-
-    // --- 6. Técnica (Abajo) ---
+    // --- 4. Técnica con Salto de Línea (Corregido) ---
     if (art.technique) {
-      ctx.font = '900 24px sans-serif'; // Sans-serif, Muy Negrita
+      ctx.font = '900 28px sans-serif';
       ctx.fillStyle = 'rgba(26, 26, 26, 0.8)';
-      ctx.fillText(`TÉCNICA: ${art.technique.toUpperCase()}`, canvasWidth / 2, canvasHeight - 250);
+      
+      // Calculamos la posición Y para que quede armónico abajo
+      // Usamos la función de envolver texto
+      drawWrappedText(
+        `TÉCNICA: ${art.technique.toUpperCase()}`, 
+        canvasWidth / 2, 
+        canvasHeight - 320, 
+        maxTextWidth, 
+        40 // Interlineado
+      );
     }
 
-    // --- 7. Nombre de la Galería (Pie de página) ---
-    ctx.font = 'italic 30px serif';
+    // --- 5. Galería (Pie) ---
+    ctx.font = 'italic 35px serif';
     ctx.fillStyle = 'rgba(26, 26, 26, 0.5)';
     ctx.fillText(settings?.galleryName || "Galleria D'Arte", canvasWidth / 2, canvasHeight - 150);
 
-    // --- 8. Ejecutar la descarga ---
+    // --- 6. Descarga ---
     const pngFile = canvas.toDataURL('image/png');
     const downloadLink = document.createElement('a');
-    // Reemplazamos espacios por guiones bajos en el nombre del archivo
     downloadLink.download = `Ficha_${art.name.replace(/\s+/g, '_')}.png`;
     downloadLink.href = pngFile;
     downloadLink.click();
   };
 
-  // Cargamos el SVG del QR como fuente para la imagen
   img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
 };
   const cancelEdit = () => {
