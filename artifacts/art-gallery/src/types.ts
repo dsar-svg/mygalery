@@ -3,6 +3,7 @@ export interface Artwork {
   name: string;
   description?: string;
   technique?: string;
+  dimensions?: string;
   price: number;
   imageUrl: string;
   createdAt: Date;
