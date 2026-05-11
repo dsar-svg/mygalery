@@ -119,6 +119,7 @@ export const artService = {
         artist: data.artist,
         description: data.description,
         technique: data.technique,
+        dimensions: data.dimensions,
         price: data.price,
         image_url: data.imageUrl,
         owner_id: user.id,
@@ -147,6 +148,7 @@ export const artService = {
       if (data.artist !== undefined) updateData.artist = data.artist;
       if (data.description !== undefined) updateData.description = data.description;
       if (data.technique !== undefined) updateData.technique = data.technique;
+      if (data.dimensions !== undefined) updateData.dimensions = data.dimensions;
       if (data.price !== undefined) updateData.price = data.price;
       if (data.imageUrl !== undefined) updateData.image_url = data.imageUrl;
 
