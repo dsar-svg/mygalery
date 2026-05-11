@@ -901,7 +901,7 @@ export function AdminPanel({ user }: AdminPanelProps) {
                     level="H"
                   />
                 </div>
-              </div>
+              
             )}
         </div>
           )}
