@@ -785,92 +785,6 @@ export function AdminPanel({ user }: AdminPanelProps) {
       </div>
 
       <AnimatePresence>
-              {qrModalOpen && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-                  onClick={() => setQrModalOpen(null)}
-                >
-                  <motion.div
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0.9, opacity: 0 }}
-                    className="bg-white rounded-[2rem] p-10 max-w-lg w-full shadow-2xl relative"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {/* Buscamos la obra seleccionada */}
-                    {artworks.filter(a => a.id === qrModalOpen).map((art) => (
-                      <div key={art.id} className="flex flex-col items-center space-y-8">
-                        <div className="space-y-4 text-center">
-                          <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-60">Ficha Técnica</p>
-                          <h2 className="font-serif text-4xl">{art.name}</h2>
-                          {art.artist && (
-                            <p className="font-serif text-xl italic opacity-60">{art.artist}</p>
-                          )}
-                        </div>
-            
-                        <div className="p-8 border-[1px] border-charcoal/10 rounded-[2rem] bg-bone-light shadow-inner">
-                          <QRCodeSVG
-                            id={`qr-code-${art.id}`}
-                            value={`${window.location.origin}/artwork/${art.id}`}
-                            size={240}
-                            level="H"
-                            includeMargin={true}
-                          />
-                        </div>
-            
-                        <div className="text-center space-y-2">
-                          {art.technique && (
-                            <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40 italic">
-                              {art.technique}
-                            </p>
-                          )}
-                          {art.dimensions && (
-                            <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40">
-                              {art.dimensions}
-                            </p>
-                          )}
-                          <p className="text-lg font-serif opacity-80 pt-4">
-                            {formatPrice(art.price, settings?.currency || 'EUR')}
-                          </p>
-                        </div>
-            
-                        <div className="flex gap-4 w-full">
-                          <button
-                            onClick={() => handleDownloadQR(art)}
-                            className="flex-1 bg-charcoal text-bone-light py-4 rounded-full uppercase tracking-[0.2em] text-[10px] font-bold hover:scale-105 transition-all shadow-xl flex items-center justify-center gap-2"
-                          >
-                            <Save className="w-4 h-4" />
-                            Descargar
-                          </button>
-                          <button
-                            onClick={() => {
-                              setPrintingArt(art);
-                              setQrModalOpen(null);
-                              setTimeout(() => window.print(), 100);
-                            }}
-                            className="flex-1 bg-bone-dark text-charcoal py-4 rounded-full uppercase tracking-[0.2em] text-[10px] font-bold hover:scale-105 transition-all shadow-xl flex items-center justify-center gap-2"
-                          >
-                            <Printer className="w-4 h-4" />
-                            Imprimir
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-            
-                    {/* Botón de cerrar (Fuera del map pero dentro del modal) */}
-                    <button
-                      onClick={() => setQrModalOpen(null)}
-                      className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white border border-charcoal/5 flex items-center justify-center hover:bg-charcoal hover:text-white transition-all"
-                    >
-                      <X className="w-5 h-5" />
-                    </button>
-                  </motion.div>
-                </motion.div>
-              )}
-            </AnimatePresence>
       
       <div className="hidden print:block fixed inset-0 bg-white z-[9999] p-20 text-left">
             {printingArt && (
@@ -901,7 +815,7 @@ export function AdminPanel({ user }: AdminPanelProps) {
                     level="H"
                   />
                 </div>
-              
+              </div>
             )}
         </div>
           )}
