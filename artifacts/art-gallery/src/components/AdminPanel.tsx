@@ -170,55 +170,74 @@ export function AdminPanel({ user }: AdminPanelProps) {
     if (!ctx) return;
 
     // 1. Fondo
-    ctx.fillStyle = '#F5F5F0'; // Color 'bone-light'
+    canvas.width = 800;
+    canvas.height = 1000;
+    ctx.fillStyle = '#FFFFFF'; 
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // 2. Borde elegante (Charcoal)
-    ctx.strokeStyle = '#1A1A1A';
-    ctx.lineWidth = 10;
-    ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
-
-    // 3. Texto: Título de la Obra
+    // 2. Título: ANCLAJE DE LUZ (Grande y Serif)
     ctx.fillStyle = '#1A1A1A';
-    ctx.textAlign = 'center';
-    ctx.font = 'bold 40px serif';
-    ctx.fillText(art.name.toUpperCase(), canvas.width / 2, 100);
+    ctx.textAlign = 'left';
+    ctx.font = '72px serif'; // Ajustar según disponibilidad de fuente
+    const marginX = 80;
+    ctx.fillText(art.name.toUpperCase(), marginX, 120);
 
-    // 4. Texto: Artista
+    // 3. Artista: HIDAYA YUSEF (Italic y Opacidad)
     if (art.artist) {
-      ctx.font = 'italic 28px serif';
-      ctx.fillStyle = 'rgba(26, 26, 26, 0.7)';
-      ctx.fillText(art.artist, canvas.width / 2, 145);
+      ctx.font = 'italic 32px serif';
+      ctx.fillStyle = 'rgba(26, 26, 26, 0.5)';
+      ctx.fillText(art.artist.toUpperCase(), marginX, 320);
     }
 
-    // 5. Dibujar el QR centrado
-    // Calculamos posición para que el QR quede en medio
-    const qrSize = 350;
-    const qrX = (canvas.width - qrSize) / 2;
-    const qrY = 220;
-    ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
-
-    // 6. Texto: Técnica y Detalles (Estilo ArtworkDetail)
-    ctx.font = '900 14px sans-serif';
-    ctx.fillStyle = 'rgba(26, 26, 26, 0.5)';
-    const infoY = 650;
+    // 4. Descripción (Párrafo justificado/izquierdo)
+      if (art.description) {
+        ctx.font = '300 24px sans-serif';
+        ctx.fillStyle = 'rgba(26, 26, 26, 0.7)';
+        const words = art.description.split(' ');
+        let line = '';
+        let y = 520;
+        const maxWidth = 640;
+        const lineHeight = 35;
     
-    if (art.technique) {
-      ctx.fillText(`TÉCNICA: ${art.technique.toUpperCase()}`, canvas.width / 2, infoY);
-    }
-    
-    if (art.dimensions) {
-      ctx.fillText(`DIMENSIONES: ${art.dimensions}`, canvas.width / 2, infoY + 30);
-    }
+        for (let n = 0; n < words.length; n++) {
+          let testLine = line + words[n] + ' ';
+          let metrics = ctx.measureText(testLine);
+          if (metrics.width > maxWidth && n > 0) {
+            ctx.fillText(line, marginX, y);
+            line = words[n] + ' ';
+            y += lineHeight;
+          } else {
+            line = testLine;
+          }
+        }
+        ctx.fillText(line, marginX, y);
+      }
 
-    // 7. Pie de página / Nombre de la Galería
-    ctx.font = 'italic 20px serif';
-    ctx.fillText(settings?.galleryName || "Gallería Privada", canvas.width / 2, 780);
+    // 5. Técnica: ACRÍLICO (Negrita y pequeño)
+      if (art.technique) {
+        ctx.font = '900 16px sans-serif';
+        ctx.fillStyle = 'rgba(26, 26, 26, 0.8)';
+        ctx.fillText(`TÉCNICA: ${art.technique.toUpperCase()}`, marginX, 820);
+
+        // Línea decorativa inferior
+          ctx.strokeStyle = 'rgba(26, 26, 26, 0.1)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(marginX, 850);
+          ctx.lineTo(canvas.width - marginX, 850);
+          ctx.stroke();
+        }
+      
+    // 6. QR en la esquina inferior derecha (Más pequeño)
+      const qrSize = 120;
+      const qrX = canvas.width - marginX - qrSize;
+      const qrY = canvas.height - 150;
+      ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
 
     // Descarga
     const pngFile = canvas.toDataURL('image/png');
     const downloadLink = document.createElement('a');
-    downloadLink.download = `Certificado_${art.name.replace(/\s+/g, '_')}.png`;
+    downloadLink.download = `Ficha_${art.name.replace(/\s+/g, '_')}.png`;
     downloadLink.href = pngFile;
     downloadLink.click();
   };
