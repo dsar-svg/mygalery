@@ -169,59 +169,42 @@ export function AdminPanel({ user }: AdminPanelProps) {
     img.onload = () => {
     if (!ctx) return;
 
-    // 1. Fondo Blanco
+    // Fondo y Marco Grueso
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // 2. MARCO GRUESO (Añadido aquí para la descarga)
     ctx.strokeStyle = '#1A1A1A';
-    ctx.lineWidth = 24; // Marco notablemente más grueso
-    const padding = 60;
-    ctx.strokeRect(padding, padding, canvas.width - (padding * 2), canvas.height - (padding * 2));
+    ctx.lineWidth = 40; 
+    ctx.strokeRect(60, 60, canvas.width - 120, canvas.height - 120);
 
-    // 3. Título (Estilo ArtworkDetail)
+    // Texto Galería
     ctx.fillStyle = '#1A1A1A';
-    ctx.textAlign = 'left';
-    ctx.font = 'bold 80px serif';
-    ctx.fillText(art.name.toUpperCase(), 150, 250);
+    ctx.textAlign = 'center';
+    ctx.font = 'italic 60px serif';
+    ctx.fillText(settings?.galleryName || "Galería d'Arte", canvas.width / 2, 200);
 
-    // 4. Artista
-    ctx.font = 'italic 40px serif';
-    ctx.fillStyle = 'rgba(26, 26, 26, 0.6)';
-    ctx.fillText(art.artist?.toUpperCase() || '', 150, 330);
+    // Línea decorativa
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(canvas.width / 2 - 80, 240);
+    ctx.lineTo(canvas.width / 2 + 80, 240);
+    ctx.stroke();
 
-    // 5. Descripción (Multilínea)
-    ctx.font = '300 30px sans-serif';
-    ctx.fillStyle = '#1A1A1A';
-    const words = (art.description || '').split(' ');
-    let line = '';
-    let y = 450;
-    for (let n = 0; n < words.length; n++) {
-      let testLine = line + words[n] + ' ';
-      if (ctx.measureText(testLine).width > 850 && n > 0) {
-        ctx.fillText(line, 150, y);
-        line = words[n] + ' ';
-        y += 45;
-      } else { line = testLine; }
-    }
-    ctx.fillText(line, 150, y);
-      
-    // 6. Técnica y Dimensiones (Pie de ficha)
-    ctx.font = '900 20px sans-serif';
-    ctx.fillStyle = 'rgba(26, 26, 26, 0.8)';
-    ctx.fillText(`TÉCNICA: ${art.technique?.toUpperCase() || 'MIXTA'}`, 150, 1400);
-    if (art.dimensions) {
-      ctx.fillText(`DIMENSIONES: ${art.dimensions}`, 150, 1440);
-    }
+    // Dibujar QR Grande y Centrado
+    const qrSize = 600;
+    ctx.drawImage(img, (canvas.width - qrSize) / 2, 400, qrSize, qrSize);
 
-    // 7. QR en la esquina inferior derecha (Dentro del marco)
-    const qrSize = 180;
-    ctx.drawImage(img, canvas.width - 150 - qrSize, canvas.height - 150 - qrSize, qrSize, qrSize);
+    // Nombre de la Obra
+    ctx.font = 'bold 70px serif';
+    ctx.fillText(art.name.toUpperCase(), canvas.width / 2, 1150);
 
-    // Ejecutar descarga
+    // Texto Certificado
+    ctx.font = '24px monospace';
+    ctx.fillStyle = 'rgba(26, 26, 26, 0.4)';
+    ctx.fillText(`CERTIFICADO DE AUTENTICIDAD DIGITAL #${art.id.slice(0,8).toUpperCase()}`, canvas.width / 2, 1300);
+
     const pngFile = canvas.toDataURL('image/png');
     const downloadLink = document.createElement('a');
-    downloadLink.download = `Ficha_${art.name}.png`;
+    downloadLink.download = `Certificado_${art.name}.png`;
     downloadLink.href = pngFile;
     downloadLink.click();
   };
@@ -768,7 +751,7 @@ export function AdminPanel({ user }: AdminPanelProps) {
         ))}
       </div>
 
-     {/* MODAL DE QR (VISTA PREVIA) */}
+    {/* MODAL DE QR */}
       <AnimatePresence>
         {qrModalOpen && (
           <motion.div
@@ -782,98 +765,83 @@ export function AdminPanel({ user }: AdminPanelProps) {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-[2rem] p-10 max-w-lg w-full shadow-2xl relative"
+              className="bg-white rounded-[3rem] p-12 max-w-lg w-full shadow-2xl relative"
               onClick={(e) => e.stopPropagation()}
             >
               {artworks.filter(a => a.id === qrModalOpen).map((art) => (
-                <div key={art.id} className="flex flex-col items-center space-y-8">
-                  <div className="space-y-4 text-center">
-                    <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-60">Ficha Técnica</p>
-                    <h2 className="font-serif text-4xl">{art.name}</h2>
-                    {art.artist && <p className="font-serif text-xl italic opacity-60">{art.artist}</p>}
+                <div key={art.id} className="flex flex-col items-center space-y-8 text-center">
+                  <div className="space-y-2">
+                    <h1 className="font-serif text-3xl italic opacity-40">{settings?.galleryName || "Galería d'Arte"}</h1>
+                    <div className="h-px w-16 bg-charcoal mx-auto opacity-10"></div>
                   </div>
 
-                  <div className="p-8 border border-charcoal/10 rounded-[2rem] bg-bone-light">
+                  <div className="p-6 border-[12px] border-charcoal rounded-[2.5rem]">
                     <QRCodeSVG
                       id={`qr-code-${art.id}`}
                       value={`${window.location.origin}/artwork/${art.id}`}
-                      size={200}
+                      size={280}
                       level="H"
                       includeMargin={true}
                     />
                   </div>
 
-                  <div className="flex gap-4 w-full">
-                    <button
-                      onClick={() => handleDownloadQR(art)}
-                      className="flex-1 bg-charcoal text-white py-4 rounded-full uppercase tracking-[0.2em] text-[10px] font-bold shadow-xl flex items-center justify-center gap-2"
-                    >
+                  <div className="space-y-2">
+                    <h2 className="font-serif text-4xl uppercase tracking-tighter">{art.name}</h2>
+                    <p className="font-mono text-[10px] opacity-20 uppercase tracking-widest">Digital Certificate ID: {art.id.slice(0,8)}</p>
+                  </div>
+
+                  <div className="flex gap-4 w-full pt-4">
+                    <button onClick={() => handleDownloadQR(art)} className="flex-1 bg-charcoal text-white py-4 rounded-full uppercase tracking-widest text-[10px] font-bold shadow-lg flex items-center justify-center gap-2">
                       <Save className="w-4 h-4" /> Descargar
                     </button>
-                    <button
-                      onClick={() => {
-                        setPrintingArt(art);
-                        setQrModalOpen(null);
-                        setTimeout(() => window.print(), 200);
-                      }}
-                      className="flex-1 bg-bone-dark text-charcoal py-4 rounded-full uppercase tracking-[0.2em] text-[10px] font-bold shadow-xl flex items-center justify-center gap-2"
-                    >
+                    <button onClick={() => { setPrintingArt(art); setQrModalOpen(null); setTimeout(() => window.print(), 300); }} className="flex-1 bg-bone-dark text-charcoal py-4 rounded-full uppercase tracking-widest text-[10px] font-bold shadow-lg flex items-center justify-center gap-2">
                       <Printer className="w-4 h-4" /> Imprimir
                     </button>
                   </div>
                 </div>
               ))}
-              <button
-                onClick={() => setQrModalOpen(null)}
-                className="absolute top-6 right-6 w-10 h-10 rounded-full bg-white border border-charcoal/5 flex items-center justify-center hover:bg-charcoal hover:text-white transition-all"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <button onClick={() => setQrModalOpen(null)} className="absolute top-6 right-6 opacity-20 hover:opacity-100 transition-opacity"><X /></button>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ESTILO PARA EVITAR MULTIPLES HOJAS AL IMPRIMIR */}
+      {/* CSS DE IMPRESIÓN FORZADO A 1 PÁGINA */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
-          body * { visibility: hidden; }
-          .print-container, .print-container * { visibility: visible; }
-          .print-container { 
-            position: fixed; 
-            left: 0; top: 0; 
-            width: 100vw; height: 100vh; 
-            margin: 0; padding: 0;
-            background: white !important;
-          }
           @page { size: portrait; margin: 0; }
+          body * { visibility: hidden; }
+          .print-area, .print-area * { visibility: visible; }
+          .print-area {
+            position: fixed;
+            left: 0; top: 0;
+            width: 100vw; height: 100vh;
+            background: white !important;
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+          }
         }
       `}} />
 
-      {/* BLOQUE DE IMPRESIÓN (CON MARCO GRUESO) */}
-      <div className="hidden print:block print-container">
+      {/* AREA DE IMPRESIÓN DISEÑO SOLICITADO */}
+      <div className="hidden print:block print-area">
         {printingArt && (
-          <div className="h-screen w-screen p-10 box-border">
-            {/* MARCO GRUESO (border-[12px]) */}
-            <div className="border-[12px] border-charcoal w-full h-full p-16 relative flex flex-col justify-between box-border">
-              <div className="space-y-12 text-left">
-                <h1 className="font-serif text-7xl uppercase leading-none tracking-tighter border-b border-charcoal/10 pb-8">
-                  {printingArt.name}
-                </h1>
-                <div className="space-y-8">
-                  <p className="font-serif text-3xl italic opacity-60 uppercase tracking-widest">{printingArt.artist}</p>
-                  <p className="text-xl font-light leading-relaxed opacity-80 max-w-2xl">{printingArt.description}</p>
-                </div>
-                <div className="pt-8">
-                  <p className="text-[10px] font-black uppercase tracking-[0.5em] opacity-90">TÉCNICA: {printingArt.technique || 'MIXTA'}</p>
-                  {printingArt.dimensions && (
-                    <p className="text-[10px] font-black uppercase tracking-[0.5em] opacity-40 mt-2">DIMENSIONES: {printingArt.dimensions}</p>
-                  )}
-                </div>
-              </div>
-              <div className="absolute bottom-12 right-12">
-                <QRCodeSVG value={`${window.location.origin}/artwork/${printingArt.id}`} size={140} level="H" />
-              </div>
+          <div className="w-[85vw] h-[90vh] border-[16px] border-charcoal rounded-[4rem] flex flex-col items-center justify-center space-y-20 p-20 bg-white">
+            <div className="text-center space-y-6">
+              <h1 className="font-serif text-6xl italic">{settings?.galleryName || "Galería d'Arte"}</h1>
+              <div className="h-px w-32 bg-charcoal mx-auto opacity-20"></div>
+            </div>
+
+            <QRCodeSVG 
+              value={`${window.location.origin}/artwork/${printingArt.id}`} 
+              size={450}
+              level="H"
+            />
+
+            <div className="text-center space-y-6">
+              <h2 className="font-serif text-7xl uppercase tracking-tighter">{printingArt.name}</h2>
+              <p className="font-mono text-sm opacity-30 tracking-widest">CERTIFICADO DE AUTENTICIDAD DIGITAL #{printingArt.id.slice(0,8).toUpperCase()}</p>
             </div>
           </div>
         )}
