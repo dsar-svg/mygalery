@@ -36,6 +36,7 @@ export function AdminPanel({ user }: AdminPanelProps) {
     artist: '',
     description: '',
     technique: '',
+    dimensions: '',
     price: 0,
     imageUrl: '',
   });
@@ -146,6 +147,7 @@ export function AdminPanel({ user }: AdminPanelProps) {
       artist: art.artist || '',
       description: art.description || '',
       technique: art.technique || '',
+      dimensions: art.dimensions || '',
       price: art.price,
       imageUrl: art.imageUrl,
     });
@@ -539,6 +541,17 @@ export function AdminPanel({ user }: AdminPanelProps) {
                     className="w-full bg-bone-light border border-charcoal/5 rounded-2xl p-5 focus:bg-white focus:border-charcoal/20 outline-none transition-all placeholder:opacity-30 font-serif text-sm"
                     value={formData.technique}
                     onChange={(e) => setFormData({ ...formData, technique: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[9px] font-black uppercase tracking-[0.3em] opacity-30 px-1">Dimensiones</label>
+                  <input
+                    type="text"
+                    placeholder="100 x 80 cm, 50x50, etc."
+                    className="w-full bg-bone-light border border-charcoal/5 rounded-2xl p-5 focus:bg-white focus:border-charcoal/20 outline-none transition-all placeholder:opacity-30 font-serif text-sm"
+                    value={formData.dimensions}
+                    onChange={(e) => setFormData({ ...formData, dimensions: e.target.value })}
                   />
                 </div>
 
