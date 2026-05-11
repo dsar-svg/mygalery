@@ -163,49 +163,107 @@ export function AdminPanel({ user }: AdminPanelProps) {
   const ctx = canvas.getContext('2d');
   const img = new Image();
 
-  canvas.width = 1200;
-  canvas.height = 1600;
-
+  const canvasWidth = 1200;
+  const canvasHeight = 1600;
+  canvas.width = canvasWidth;
+  canvas.height = canvasHeight;
+    
   img.onload = () => {
     if (!ctx) return;
 
-    // Fondo Blanco
+    // --- 1. Fondo Blanco ---
     ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Marco Muy Grueso
-    ctx.strokeStyle = '#1A1A1A';
-    ctx.lineWidth = 60; 
-    ctx.strokeRect(80, 80, canvas.width - 160, canvas.height - 160);
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-    // Texto Galería (Arriba)
-    ctx.fillStyle = '#1A1A1A';
-    ctx.textAlign = 'center';
-    ctx.font = 'italic 70px serif';
-    ctx.fillText(settings?.galleryName || "Galería d'Arte", canvas.width / 2, 280);
+    // --- 2. Dibujar el Marco con Esquinas Redondeadas ---
+    const framePadding = 60; // Espaciado desde el borde del canvas
+    const frameWidth = canvasWidth - framePadding * 2;
+    const frameHeight = canvasHeight - framePadding * 2;
+    const cornerRadius = 50; // Radio de redondeo (equivalente a rounded-[3rem])
+    const lineWidth = 20; // Grosor del marco
 
-    // Línea decorativa
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(canvas.width / 2 - 60, 330);
-    ctx.lineTo(canvas.width / 2 + 60, 330);
+    ctx.strokeStyle = '#1A1A1A'; // Color charcoal
+    ctx.lineWidth = lineWidth;
+    ctx.lineJoin = 'round'; // Suaviza las uniones
+
+    // Función auxiliar para dibujar un rectángulo con esquinas redondeadas
+    const drawRoundedRect = (
+      x: number,
+      y: number,
+      width: number,
+      height: number,
+      radius: number
+    ) => {
+      ctx.beginPath();
+      ctx.moveTo(x + radius, y);
+      ctx.lineTo(x + width - radius, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+      ctx.lineTo(x + width, y + height - radius);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+      ctx.lineTo(x + radius, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+      ctx.lineTo(x, y + radius);
+      ctx.quadraticCurveTo(x, y, x + radius, y);
+      ctx.closePath();
+    };
+
+    // Dibujamos el trazo del marco redondeado
+    drawRoundedRect(framePadding, framePadding, frameWidth, frameHeight, cornerRadius);
     ctx.stroke();
 
-    // QR Grande y Centrado
-    const qrSize = 550;
-    ctx.drawImage(img, (canvas.width - qrSize) / 2, 480, qrSize, qrSize);
+    // --- 3. Titulo de la Obra (Con ajuste automático de tamaño) ---
+    ctx.fillStyle = '#1A1A1A';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
 
-    // Nombre de la Obra (Abajo)
-    ctx.font = 'bold 85px serif';
-    ctx.fillText(art.name.toUpperCase(), canvas.width / 2, 1300);
+    const maxTitleWidth = frameWidth - 200; // Margen interno para el texto
+    let titleFontSize = 80; // Tamaño de fuente base ( Serif, Negrita)
+    ctx.font = `bold ${titleFontSize}px serif`;
 
+    // Bucle para reducir el tamaño de la fuente si el texto es demasiado ancho
+    while (ctx.measureText(art.name.toUpperCase()).width > maxTitleWidth && titleFontSize > 30) {
+      titleFontSize -= 5;
+      ctx.font = `bold ${titleFontSize}px serif`;
+    }
+
+    // Dibujamos el título centrado en la parte superior
+    ctx.fillText(art.name.toUpperCase(), canvasWidth / 2, 250);
+
+    // --- 4. Nombre del Artista ---
+    if (art.artist) {
+      ctx.font = 'italic 40px serif';
+      ctx.fillStyle = 'rgba(26, 26, 26, 0.6)'; // Charcoal con opacidad
+      ctx.fillText(art.artist.toUpperCase(), canvasWidth / 2, 330);
+    }
+
+    // --- 5. Dibujar el Código QR Centrado ---
+    const qrSize = 500; // Tamaño del QR en el canvas
+    const qrX = (canvasWidth - qrSize) / 2;
+    const qrY = (canvasHeight - qrSize) / 2; // Centrado verticalmente
+    ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
+
+    // --- 6. Técnica (Abajo) ---
+    if (art.technique) {
+      ctx.font = '900 24px sans-serif'; // Sans-serif, Muy Negrita
+      ctx.fillStyle = 'rgba(26, 26, 26, 0.8)';
+      ctx.fillText(`TÉCNICA: ${art.technique.toUpperCase()}`, canvasWidth / 2, canvasHeight - 250);
+    }
+
+    // --- 7. Nombre de la Galería (Pie de página) ---
+    ctx.font = 'italic 30px serif';
+    ctx.fillStyle = 'rgba(26, 26, 26, 0.5)';
+    ctx.fillText(settings?.galleryName || "Galleria D'Arte", canvasWidth / 2, canvasHeight - 150);
+
+    // --- 8. Ejecutar la descarga ---
     const pngFile = canvas.toDataURL('image/png');
     const downloadLink = document.createElement('a');
-    downloadLink.download = `QR_${art.name}.png`;
+    // Reemplazamos espacios por guiones bajos en el nombre del archivo
+    downloadLink.download = `Ficha_${art.name.replace(/\s+/g, '_')}.png`;
     downloadLink.href = pngFile;
     downloadLink.click();
   };
 
+  // Cargamos el SVG del QR como fuente para la imagen
   img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
 };
   const cancelEdit = () => {
