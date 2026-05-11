@@ -163,81 +163,65 @@ export function AdminPanel({ user }: AdminPanelProps) {
     const ctx = canvas.getContext('2d');
     const img = new Image();
 
-    canvas.width = 600;
-    canvas.height = 850;
+    canvas.width = 1200;
+    canvas.height = 1600;
 
     img.onload = () => {
     if (!ctx) return;
 
-    // 1. Fondo
-    canvas.width = 800;
-    canvas.height = 1000;
-    ctx.fillStyle = '#FFFFFF'; 
+    // 1. Fondo Blanco
+    ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // 2. Título: ANCLAJE DE LUZ (Grande y Serif)
+    // 2. MARCO GRUESO (Añadido aquí para la descarga)
+    ctx.strokeStyle = '#1A1A1A';
+    ctx.lineWidth = 24; // Marco notablemente más grueso
+    const padding = 60;
+    ctx.strokeRect(padding, padding, canvas.width - (padding * 2), canvas.height - (padding * 2));
+
+    // 3. Título (Estilo ArtworkDetail)
     ctx.fillStyle = '#1A1A1A';
     ctx.textAlign = 'left';
-    ctx.font = '72px serif'; // Ajustar según disponibilidad de fuente
-    const marginX = 80;
-    ctx.fillText(art.name.toUpperCase(), marginX, 120);
+    ctx.font = 'bold 80px serif';
+    ctx.fillText(art.name.toUpperCase(), 150, 250);
 
-    // 3. Artista: HIDAYA YUSEF (Italic y Opacidad)
-    if (art.artist) {
-      ctx.font = 'italic 32px serif';
-      ctx.fillStyle = 'rgba(26, 26, 26, 0.5)';
-      ctx.fillText(art.artist.toUpperCase(), marginX, 320);
+    // 4. Artista
+    ctx.font = 'italic 40px serif';
+    ctx.fillStyle = 'rgba(26, 26, 26, 0.6)';
+    ctx.fillText(art.artist?.toUpperCase() || '', 150, 330);
+
+    // 5. Descripción (Multilínea)
+    ctx.font = '300 30px sans-serif';
+    ctx.fillStyle = '#1A1A1A';
+    const words = (art.description || '').split(' ');
+    let line = '';
+    let y = 450;
+    for (let n = 0; n < words.length; n++) {
+      let testLine = line + words[n] + ' ';
+      if (ctx.measureText(testLine).width > 850 && n > 0) {
+        ctx.fillText(line, 150, y);
+        line = words[n] + ' ';
+        y += 45;
+      } else { line = testLine; }
+    }
+    ctx.fillText(line, 150, y);
+      
+    // 6. Técnica y Dimensiones (Pie de ficha)
+    ctx.font = '900 20px sans-serif';
+    ctx.fillStyle = 'rgba(26, 26, 26, 0.8)';
+    ctx.fillText(`TÉCNICA: ${art.technique?.toUpperCase() || 'MIXTA'}`, 150, 1400);
+    if (art.dimensions) {
+      ctx.fillText(`DIMENSIONES: ${art.dimensions}`, 150, 1440);
     }
 
-    // 4. Descripción (Párrafo justificado/izquierdo)
-      if (art.description) {
-        ctx.font = '300 24px sans-serif';
-        ctx.fillStyle = 'rgba(26, 26, 26, 0.7)';
-        const words = art.description.split(' ');
-        let line = '';
-        let y = 520;
-        const maxWidth = 640;
-        const lineHeight = 35;
-    
-        for (let n = 0; n < words.length; n++) {
-          let testLine = line + words[n] + ' ';
-          let metrics = ctx.measureText(testLine);
-          if (metrics.width > maxWidth && n > 0) {
-            ctx.fillText(line, marginX, y);
-            line = words[n] + ' ';
-            y += lineHeight;
-          } else {
-            line = testLine;
-          }
-        }
-        ctx.fillText(line, marginX, y);
-      }
+    // 7. QR en la esquina inferior derecha (Dentro del marco)
+    const qrSize = 180;
+    ctx.drawImage(img, canvas.width - 150 - qrSize, canvas.height - 150 - qrSize, qrSize, qrSize);
 
-    // 5. Técnica: ACRÍLICO (Negrita y pequeño)
-      if (art.technique) {
-        ctx.font = '900 16px sans-serif';
-        ctx.fillStyle = 'rgba(26, 26, 26, 0.8)';
-        ctx.fillText(`TÉCNICA: ${art.technique.toUpperCase()}`, marginX, 820);
-
-        // Línea decorativa inferior
-          ctx.strokeStyle = 'rgba(26, 26, 26, 0.1)';
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.moveTo(marginX, 850);
-          ctx.lineTo(canvas.width - marginX, 850);
-          ctx.stroke();
-        }
-      
-    // 6. QR en la esquina inferior derecha (Más pequeño)
-      const qrSize = 120;
-      const qrX = canvas.width - marginX - qrSize;
-      const qrY = canvas.height - 150;
-      ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
-
-    // Descarga
+    // Ejecutar descarga
     const pngFile = canvas.toDataURL('image/png');
     const downloadLink = document.createElement('a');
-    downloadLink.download = `Ficha_${art.name.replace(/\s+/g, '_')}.png`;
+    downloadLink.download = `Ficha_${art.name}.png`;
     downloadLink.href = pngFile;
     downloadLink.click();
   };
@@ -845,45 +829,43 @@ export function AdminPanel({ user }: AdminPanelProps) {
       </AnimatePresence>
 
       {/* BLOQUE DE IMPRESIÓN (FUERA DE TODO BUCLE) */}
+      {/* BLOQUE DE IMPRESIÓN CORREGIDO */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
           body * { visibility: hidden; }
           .print-section, .print-section * { visibility: visible; }
           .print-section { 
-            position: absolute; 
-            left: 0; 
-            top: 0; 
-            width: 100%; 
-            height: 100vh; 
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
+            position: fixed; 
+            left: 0; top: 0; 
+            width: 100vw; height: 100vh; 
+            background: white !important;
+            margin: 0; padding: 0;
           }
           @page { size: portrait; margin: 0; }
         }
       `}} />
 
-      <div className="hidden print:block print-section bg-white">
+      <div className="hidden print:block print-section">
         {printingArt && (
-          <div className="h-full w-full p-12 flex items-center justify-center">
-            {/* MARCO EXTERIOR */}
-            <div className="border-[1px] border-charcoal/20 w-full h-full p-16 relative flex flex-col justify-between">
+          <div className="h-screen w-screen p-8 box-border bg-white">
+            {/* MARCO GRUESO: border-[6px] para que sea bien visible */}
+            <div className="border-[6px] border-charcoal w-full h-full p-16 relative flex flex-col justify-between box-border">
               
-              <div className="space-y-16">
-                <h1 className="font-serif text-7xl uppercase leading-none tracking-tighter border-b border-charcoal/5 pb-8">
+              <div className="space-y-12">
+                <h1 className="font-serif text-7xl uppercase leading-none tracking-tighter border-b-[1px] border-charcoal/10 pb-8">
                   {printingArt.name}
                 </h1>
                 
-                <div className="space-y-8">
+                <div className="space-y-6">
                   <p className="font-serif text-3xl italic opacity-60 uppercase tracking-widest">
                     {printingArt.artist}
                   </p>
-                  <p className="text-xl font-light leading-relaxed opacity-80 max-w-2xl italic">
+                  <p className="text-xl font-light leading-relaxed opacity-80 max-w-2xl">
                     {printingArt.description}
                   </p>
                 </div>
 
-                <div className="pt-8">
+                <div className="pt-10">
                   <p className="text-[10px] font-black uppercase tracking-[0.5em] opacity-90">
                     TÉCNICA: {printingArt.technique || 'Técnica Mixta'}
                   </p>
@@ -896,19 +878,14 @@ export function AdminPanel({ user }: AdminPanelProps) {
               </div>
 
               {/* QR en la esquina inferior derecha del marco */}
-              <div className="absolute bottom-12 right-12 flex flex-col items-end space-y-2">
+              <div className="absolute bottom-12 right-12">
                 <QRCodeSVG 
                   value={`${window.location.origin}/artwork/${printingArt.id}`} 
-                  size={110} 
+                  size={120} 
                   level="H" 
                 />
-                <p className="text-[8px] font-mono opacity-20 uppercase">Digital Certificate</p>
               </div>
-
             </div>
           </div>
         )}
       </div>
-    </div> // Cierre del contenedor principal
-  );
-}
